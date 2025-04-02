@@ -1,2 +1,3 @@
 # TelloMove
-A control application for Ryze Tello
+
+A control application for Ryze Tello.
