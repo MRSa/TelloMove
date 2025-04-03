@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">TelloMove</string>
+    <string name="permission_not_granted">Permissions not granted by the user.</string>
+
+
+    <string name="label_return_to_main_screen">Return to Main</string>
+    <string name="label_switch_preference_screen">Preferences</string>
+
+    <string name="pref_show_wifi_settings">Wi-Fi Settings</string>
+    <string name="pref_show_wifi_settings_detail">Show Wi-Fi Settings Screen</string>
+
+    <string name="label_switch_check_product_id">Check ID</string>
+    <string name="description_switch_check_product_id"> </string>
+
+    <string name="pref_instruction_manual">Instruction</string>
+    <string name="pref_instruction_manual_url">https://github.com/MRSa/TelloMove/blob/master/docs/Readme.md</string>
+
+    <string name="pref_privacy_policy">Privacy Policy</string>
+    <string name="pref_privacy_policy_url">https://github.com/MRSa/GokigenOSDN_documents/blob/main/PrivacyPolicy.md</string>
+</resources>

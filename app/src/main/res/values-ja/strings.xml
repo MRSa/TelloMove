@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">TelloMove</string>
+    <string name="permission_not_granted">必要な権限が有効ではありません。有効にしてください。</string>
+
+    <string name="label_return_to_main_screen">戻る</string>
+    <string name="label_switch_preference_screen">設定</string>
+
+    <string name="pref_show_wifi_settings">Wi-Fi設定</string>
+    <string name="pref_show_wifi_settings_detail">Wi-Fi設定画面を開きます。</string>
+
+    <string name="label_switch_check_product_id">ID確認</string>
+    <string name="description_switch_check_product_id"> </string>
+
+    <string name="pref_instruction_manual">操作説明</string>
+    <string name="pref_instruction_manual_url">https://github.com/MRSa/TelloMove/blob/master/docs/Readme.md</string>
+
+    <string name="pref_privacy_policy">プライバシーポリシー</string>
+    <string name="pref_privacy_policy_url">https://github.com/MRSa/GokigenOSDN_documents/blob/main/PrivacyPolicy.md</string>
+</resources>
