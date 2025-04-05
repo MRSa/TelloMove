@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import jp.osdn.gokigen.tellomove.communication.CommandPublisher
 import jp.osdn.gokigen.tellomove.communication.StatusReceiver
+import jp.osdn.gokigen.tellomove.communication.StatusWatchDog
 
 class AppSingleton : Application()
 {
@@ -16,9 +17,9 @@ class AppSingleton : Application()
             Log.v(TAG, "AppSingleton::create()")
             publisher = CommandPublisher()
             receiver = StatusReceiver()
-            receiver.startReceive()
-            publisher.start()
-            isInitialized = true
+            watchdog = StatusWatchDog()
+            starter = ProcessStarter(this)
+            startProcess()
         }
         catch (e: Exception)
         {
@@ -26,12 +27,56 @@ class AppSingleton : Application()
         }
     }
 
-    fun isInitialized() : Boolean { return (isInitialized) }
+    override fun onTerminate()
+    {
+        super.onTerminate()
+        try
+        {
+            isInitialized = false
+            publisher.stop()
+            receiver.stopReceive()
+            watchdog.stopWatchDog()
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun startProcess()
+    {
+        try
+        {
+            if (!isInitialized)
+            {
+                receiver.startReceive()
+                publisher.start()
+                watchdog.startWatchDog()
+                isInitialized = true
+                Thread.sleep(WAIT_MS)
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    class ProcessStarter(private val parent: AppSingleton)
+    {
+        fun start()
+        {
+            parent.startProcess()
+        }
+    }
 
     companion object
     {
         lateinit var publisher: CommandPublisher
         lateinit var receiver: StatusReceiver
+        lateinit var watchdog: StatusWatchDog
+        lateinit var starter: ProcessStarter
+        private const val WAIT_MS = 25L
         private val TAG = AppSingleton::class.java.simpleName
     }
 }

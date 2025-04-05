@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import jp.osdn.gokigen.tellomove.AppSingleton
 import jp.osdn.gokigen.tellomove.R
 import jp.osdn.gokigen.tellomove.ui.model.PreferenceViewModel
 import kotlinx.coroutines.launch
@@ -111,6 +112,7 @@ fun ShowWifiSettings()
         Spacer(modifier = Modifier.width(8.dp))
         Icon(
             painter = painterResource(id = R.drawable.baseline_wifi_24),
+            tint = MaterialTheme.colorScheme.primary,
             contentDescription = "Wifi",
             modifier = Modifier.clickable( onClick = {
                 context.startActivity(Intent(Intent(Settings.ACTION_WIFI_SETTINGS)))
@@ -121,24 +123,13 @@ fun ShowWifiSettings()
         Text(
             text = stringResource(R.string.pref_show_wifi_settings),
             color = MaterialTheme.colorScheme.primary,
-            fontSize = with(density) { 18.dp.toSp() }
+            fontSize = with(density) { 18.dp.toSp() },
+            modifier = Modifier
+                .align(Alignment.CenterVertically)
+                .clickable {
+                    context.startActivity(Intent(Intent(Settings.ACTION_WIFI_SETTINGS)))
+                }
         )
-/*
-        Column {
-            Text(
-                text = stringResource(R.string.pref_show_wifi_settings),
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = with(density) { 18.dp.toSp() }
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.pref_show_wifi_settings_detail),
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.clickable(onClick = { context.startActivity(Intent(Intent(Settings.ACTION_WIFI_SETTINGS))) }),
-                fontSize = with(density) { 14.dp.toSp() }
-            )
-        }
-*/
     }
 }
 

@@ -7,6 +7,8 @@ import java.util.Queue
 class CommandPublisher(private val ipAddress: String = "192.168.10.1", private val commandPortNo: Int = 8889) : ICommandPublisher
 {
     private val commandQueue : Queue<TelloCommand> = ArrayDeque()
+    private var isConnected = false
+    private var isStarted = false
 
     init
     {
@@ -28,12 +30,55 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
         return (false)
     }
 
-    override fun isConnected(): Boolean
+    override fun isConnected(): Boolean { return (isConnected) }
+
+    fun start()
     {
-        TODO("Not yet implemented")
+        try
+        {
+            Log.v(TAG, "CommandPublisher::start()")
+            Thread {
+                try
+                {
+                    isStarted = true
+                    while (isStarted)
+                    {
+                        commandSender()
+                    }
+                }
+                catch (e: Exception)
+                {
+                    e.printStackTrace()
+                }
+            }.start()
+        }
+        catch (ee: Exception)
+        {
+            ee.printStackTrace()
+        }
     }
 
-    override fun start()
+    private fun commandSender()
+    {
+        try
+        {
+            val command = commandQueue.poll()
+            if (command != null)
+            {
+                issueCommand(command)
+                Thread.sleep(COMMAND_POLL_QUEUE_MS.toLong())
+                Log.v(TAG, " --- RECEIVE FOR REPLY --- ")
+                receiveFromTello(command)
+            }
+            Thread.sleep(COMMAND_POLL_QUEUE_MS.toLong())
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    private fun issueCommand(command: TelloCommand)
     {
         try
         {
@@ -45,7 +90,7 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
         }
     }
 
-    override fun stop()
+    private fun receiveFromTello(command: TelloCommand)
     {
         try
         {
@@ -55,15 +100,30 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
         {
             e.printStackTrace()
         }
+    }
+
+    fun stop()
+    {
+        try
+        {
+            Log.v(TAG, "CommandPublisher::stop()")
+            isStarted = false
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun setConnectionStatus(status: Boolean)
+    {
+        isConnected = status
     }
 
     companion object
     {
         private val TAG = CommandPublisher::class.java.simpleName
         private const val BUFFER_SIZE = 1024 * 1024 + 16 // 受信バッファは 1MB
-        private const val COMMAND_SEND_RECEIVE_DURATION_MS = 30
-        private const val COMMAND_SEND_RECEIVE_DURATION_MAX = 3000
-        private const val COMMAND_POLL_QUEUE_MS = 15
+        private const val COMMAND_POLL_QUEUE_MS = 35
     }
-
 }

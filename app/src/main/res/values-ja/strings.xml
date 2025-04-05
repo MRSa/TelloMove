@@ -2,6 +2,9 @@
     <string name="app_name">TelloMove</string>
     <string name="permission_not_granted">必要な権限が有効ではありません。有効にしてください。</string>
 
+    <string name="label_connected">接続</string>
+    <string name="label_disconnected">切断</string>
+    <string name="label_status">状態: </string>
     <string name="label_control">コントローラ</string>
     <string name="label_return_to_main_screen">戻る</string>
     <string name="label_switch_preference_screen">設定</string>
