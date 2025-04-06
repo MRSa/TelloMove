@@ -32,6 +32,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
     private val batteryRemain : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
     val batteryPercent: LiveData<Int> = batteryRemain
 
+    private val lastCommand : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val lastCommandStatus: LiveData<Boolean> = lastCommand
+
     fun initializeViewModel(activity: AppCompatActivity)
     {
         try
@@ -43,6 +46,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
             turnDegree.value = 90
             currentSpeed.value = 20
             batteryRemain.value = -1
+            lastCommand.value = false
 
             // subscribe events
             AppSingleton.watchdog.setReportBatteryStatus(this)
@@ -54,15 +58,60 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         }
     }
 
-    fun setDistance(distance: Int) { moveDistance.value = distance }
-    fun setDegree(degree: Int) { moveDistance.value = degree }
-    fun setSpeed(speed: Int) { currentSpeed.value = speed }
+    fun setDistance(distance: Int)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                moveDistance.value = distance
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun setDegree(degree: Int)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                turnDegree.value = degree
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun setSpeed(speed: Int)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                currentSpeed.value = speed
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
 
     override fun setConnectionStatus(isConnect: Boolean)
     {
-        CoroutineScope(Dispatchers.Main).launch {
-            isConnected.value = isConnect
-            AppSingleton.publisher.setConnectionStatus(isConnect)
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                isConnected.value = isConnect
+                AppSingleton.publisher.setConnectionStatus(isConnect)
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
         }
     }
 
@@ -72,6 +121,21 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         {
             CoroutineScope(Dispatchers.Main).launch {
                 statusMessageString.value = status
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    override fun updateCommandStatus(command: String, isSuccess: Boolean)
+    {
+        try
+        {
+            Log.v(TAG, "$command : $isSuccess")
+            CoroutineScope(Dispatchers.Main).launch {
+                lastCommand.value = isSuccess
             }
         }
         catch (e: Exception)
@@ -99,5 +163,4 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
     {
         private val TAG = MainViewModel::class.java.simpleName
     }
-
 }
