@@ -8,7 +8,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
-import jp.osdn.gokigen.tellomove.AppSingleton
 
 import jp.osdn.gokigen.tellomove.preference.IPreferencePropertyAccessor
 
