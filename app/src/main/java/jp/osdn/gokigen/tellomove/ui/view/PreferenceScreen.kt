@@ -17,11 +17,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,10 +28,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
-import jp.osdn.gokigen.tellomove.AppSingleton
 import jp.osdn.gokigen.tellomove.R
 import jp.osdn.gokigen.tellomove.ui.model.PreferenceViewModel
-import kotlinx.coroutines.launch
 
 @Composable
 fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceViewModel)
@@ -44,10 +39,7 @@ fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceVie
     MaterialTheme {
         val scrollState = rememberScrollState()
         Column(
-            //modifier = Modifier.systemBarsPadding().fillMaxSize().verticalScroll(scrollState)
             modifier = Modifier
-                // .padding(top = 48.dp)  // ベタすぎる...
-                //.systemBarsPadding()    // 1回目の描画ではこの指定が効いていないみたい...
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         )
@@ -59,9 +51,9 @@ fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceVie
             HorizontalDivider(thickness = 1.dp)
             ShowWifiSettings()
             Spacer(Modifier.size(padding))
-            HorizontalDivider(thickness = 1.dp)
-            SwitchCheckProductId(prefsModel)
-            Spacer(Modifier.size(padding))
+            //HorizontalDivider(thickness = 1.dp)
+            //SwitchCheckProductId(prefsModel)
+            //Spacer(Modifier.size(padding))
             HorizontalDivider(thickness = 1.dp)
             ShowAboutGokigen()
             Spacer(Modifier.size(padding))
@@ -133,6 +125,7 @@ fun ShowWifiSettings()
     }
 }
 
+/*
 @Composable
 fun SwitchCheckProductId(prefsModel: PreferenceViewModel)
 {
@@ -163,6 +156,7 @@ fun SwitchCheckProductId(prefsModel: PreferenceViewModel)
         color = MaterialTheme.colorScheme.secondary,
         fontSize = with(density) { 14.dp.toSp() },)
 }
+*/
 
 @Composable
 fun ShowAboutGokigen()

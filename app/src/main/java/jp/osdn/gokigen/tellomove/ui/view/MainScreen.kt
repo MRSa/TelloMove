@@ -107,7 +107,7 @@ fun ControlButtonsLayout(viewModel: MainViewModel)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_upload_24, true)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_flight_takeoff_24, true)
+            ControlPadButton(viewModel, R.drawable.baseline_flight_takeoff_24, true, "takeoff")
             Spacer(modifier = Modifier.weight(1.0f))
         }
         Spacer(modifier = Modifier.weight(1.0f))
@@ -139,7 +139,7 @@ fun ControlButtonsLayout(viewModel: MainViewModel)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_download_24, true)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_flight_land_24, true)
+            ControlPadButton(viewModel, R.drawable.baseline_flight_land_24, true, "land")
             Spacer(modifier = Modifier.weight(1.0f))
         }
         HorizontalDivider(thickness = 1.dp)
@@ -168,7 +168,7 @@ fun ControlButtonsLayout(viewModel: MainViewModel)
                 enabled = false,
                 value = statusMessage.value ?: "",
                 singleLine = true,
-                onValueChange = { value -> viewModel.setStatusMessage(value) },
+                onValueChange = { value -> viewModel.updateStatus(value) },
             )
         }
         HorizontalDivider(thickness = 1.dp)

@@ -6,6 +6,7 @@ import jp.osdn.gokigen.tellomove.AppSingleton
 class StatusWatchDog
 {
     private var isStarted = false
+    private lateinit var reportBatteryStatus: IStatusUpdate
 
     fun startWatchDog()
     {
@@ -20,8 +21,19 @@ class StatusWatchDog
                     {
                         if (AppSingleton.publisher.isConnected()) {
                             AppSingleton.publisher.enqueueCommand("battery?", object : ICommandResult {
-                                override fun commandResult(command: String, detail: String) {
-                                    Log.v(TAG, "POST($command) : $detail")
+                                override fun commandResult(command: String, receivedStatus: Boolean, detail: String) {
+                                    Log.v(TAG, "RECEIVE($command) : $receivedStatus, $detail")
+                                    try
+                                    {
+                                        if ((::reportBatteryStatus.isInitialized)&&(detail.isNotEmpty()))
+                                        {
+                                            reportBatteryStatus.updateBatteryRemain(detail.toInt())
+                                        }
+                                    }
+                                    catch (e: Exception)
+                                    {
+                                        e.printStackTrace()
+                                    }
                                 }
                             })
                         }
@@ -43,6 +55,11 @@ class StatusWatchDog
     fun stopWatchDog()
     {
         isStarted = false
+    }
+
+    fun setReportBatteryStatus(target: IStatusUpdate)
+    {
+        reportBatteryStatus = target
     }
 
     companion object

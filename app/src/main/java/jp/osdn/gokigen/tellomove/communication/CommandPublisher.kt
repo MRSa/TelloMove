@@ -1,6 +1,11 @@
 package jp.osdn.gokigen.tellomove.communication
 
 import android.util.Log
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+import java.net.SocketTimeoutException
+import java.nio.charset.Charset
 import java.util.ArrayDeque
 import java.util.Queue
 
@@ -66,15 +71,12 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
             if (command != null)
             {
                 issueCommand(command)
-                Thread.sleep(COMMAND_POLL_QUEUE_MS.toLong())
-                Log.v(TAG, " --- RECEIVE FOR REPLY --- ")
-                receiveFromTello(command)
             }
             Thread.sleep(COMMAND_POLL_QUEUE_MS.toLong())
         }
-        catch (e: Exception)
+        catch (ex: Exception)
         {
-            e.printStackTrace()
+            ex.printStackTrace()
         }
     }
 
@@ -82,23 +84,49 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
     {
         try
         {
+            var result: Boolean
+            var replyDetail = ""
+            DatagramSocket().use { socket ->
+                val serverAddress = InetAddress.getByName(ipAddress)
+                val sendData = command.command.toByteArray(Charset.forName("UTF-8"))
+                val sendPacket = DatagramPacket(sendData, sendData.size, serverAddress, commandPortNo)
 
-        }
-        catch (e: Exception)
-        {
-            e.printStackTrace()
-        }
-    }
+                // データ送信
+                socket.send(sendPacket)
 
-    private fun receiveFromTello(command: TelloCommand)
-    {
-        try
-        {
+                // 受信バッファを用意
+                val receiveBuffer = ByteArray(BUFFER_SIZE)
+                val receivePacket = DatagramPacket(receiveBuffer, receiveBuffer.size)
 
+                // 受信タイムアウトを設定
+                socket.soTimeout = COMMAND_SEND_TIMEOUT_MS
+
+                try
+                {
+                    socket.receive(receivePacket)
+
+                    Log.v(TAG, " <<<<< RECEIVED REPLY ${command.command} $replyDetail ")
+                    replyDetail = String(receivePacket.data, 0, receivePacket.length, Charset.forName("UTF-8"))
+                    result = true
+                }
+                catch (e: SocketTimeoutException)
+                {
+                    Log.v(TAG, "<<<<< TIMEOUT ${command.command}")
+                    result = false
+                    replyDetail = ""
+                }
+                catch (e: Exception)
+                {
+                    Log.v(TAG, "<<<<< EXCEPTION ${command.command}")
+                    result = false
+                    replyDetail = ""
+                }
+            }
+            command.callback?.commandResult(command.command, result, replyDetail)
         }
-        catch (e: Exception)
+        catch (ee: Exception)
         {
-            e.printStackTrace()
+            ee.printStackTrace()
         }
     }
 
@@ -123,7 +151,8 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
     companion object
     {
         private val TAG = CommandPublisher::class.java.simpleName
-        private const val BUFFER_SIZE = 1024 * 1024 + 16 // 受信バッファは 1MB
+        private const val BUFFER_SIZE = 384 * 1024 + 16  // 受信バッファは 384kB
         private const val COMMAND_POLL_QUEUE_MS = 35
+        private const val COMMAND_SEND_TIMEOUT_MS = 3500  // 3500ms
     }
 }

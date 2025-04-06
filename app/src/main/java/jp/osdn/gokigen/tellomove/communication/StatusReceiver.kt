@@ -4,11 +4,13 @@ import android.util.Log
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
+import java.nio.charset.Charset
 
 class StatusReceiver(private val statusPortNo: Int = 8890)
 {
     private var isReceiving = false
     private lateinit var receiverSocket: DatagramSocket
+    private lateinit var statusUpdateReport: IStatusUpdate
 
     fun startReceive()
     {
@@ -55,10 +57,12 @@ class StatusReceiver(private val statusPortNo: Int = 8890)
     {
         try
         {
-            val dataLength: Int = packet.length
-            val receivedData: ByteArray = packet.data
-
-            Log.v(TAG, " checkReceiveData (length:$dataLength [${receivedData.size}]) ")
+            val receivedStatus = String(packet.data, 0, packet.length, Charset.forName("UTF-8"))
+            Log.v(TAG, " Status (length:${receivedStatus.length}) $receivedStatus ")
+            if (::statusUpdateReport.isInitialized)
+            {
+                statusUpdateReport.updateStatus(receivedStatus)
+            }
         }
         catch (e: Exception)
         {
@@ -71,10 +75,15 @@ class StatusReceiver(private val statusPortNo: Int = 8890)
         isReceiving = false
     }
 
+    fun setStatusUpdateReport(target: IStatusUpdate)
+    {
+        statusUpdateReport = target
+    }
+
     companion object
     {
         private val TAG = CommandPublisher::class.java.simpleName
-        private const val BUFFER_SIZE = 1024 * 1024 + 16 // 受信バッファは 1MB
+        private const val BUFFER_SIZE = 256 * 1024 + 16 // 受信バッファは 256kB
         private const val TIMEOUT_MS = 5500
     }
 }
