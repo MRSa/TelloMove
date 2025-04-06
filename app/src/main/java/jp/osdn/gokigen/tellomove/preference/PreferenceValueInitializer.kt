@@ -15,10 +15,10 @@ class PreferenceValueInitializer
             val preferences = PreferenceManager.getDefaultSharedPreferences(context) ?: return
             val items : Map<String, *> = preferences.all
             preferences.edit() {
-                if (!items.containsKey(IPreferencePropertyAccessor.PREFERENCE_CHECK_PRODUCT_ID)) {
+                if (!items.containsKey(IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG)) {
                     putBoolean(
-                        IPreferencePropertyAccessor.PREFERENCE_CHECK_PRODUCT_ID,
-                        IPreferencePropertyAccessor.PREFERENCE_CHECK_PRODUCT_ID_DEFAULT_VALUE
+                        IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG,
+                        IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE
                     )
                 }
             }

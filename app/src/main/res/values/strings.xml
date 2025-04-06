@@ -12,6 +12,9 @@
     <string name="pref_show_wifi_settings">Wi-Fi Settings</string>
     <string name="pref_show_wifi_settings_detail">Show Wi-Fi Settings Screen</string>
 
+    <string name="label_switch_watchdog">Use polling</string>
+    <string name="description_switch_watchdog">Settings will take effect after the app is restarted.</string>
+
     <string name="label_switch_check_product_id">Check ID</string>
     <string name="description_switch_check_product_id"> </string>
 

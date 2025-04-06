@@ -3,19 +3,20 @@ package jp.osdn.gokigen.tellomove.communication
 import android.util.Log
 import jp.osdn.gokigen.tellomove.AppSingleton
 
-class StatusWatchDog
+class StatusWatchDog()
 {
     private var isStarted = false
+    private var useWatchdog = true
     private lateinit var reportBatteryStatus: IStatusUpdate
 
     fun startWatchDog()
     {
         try
         {
-            Log.v(TAG, "startWatchDog() ")
+            Log.v(TAG, "startWatchDog() : $useWatchdog")
             isStarted = true
             Thread {
-                while (isStarted)
+                while ((isStarted)&&(useWatchdog))
                 {
                     try
                     {
@@ -56,6 +57,8 @@ class StatusWatchDog
     {
         isStarted = false
     }
+
+    fun setUseWatchdog(isUse: Boolean) { useWatchdog = isUse}
 
     fun setReportBatteryStatus(target: IStatusUpdate)
     {

@@ -6,8 +6,8 @@ interface IPreferencePropertyAccessor
     companion object
     {
         // --- PREFERENCE KEY AND DEFAULT VALUE ---
-        const val PREFERENCE_CHECK_PRODUCT_ID = "check_product_id"
-        const val PREFERENCE_CHECK_PRODUCT_ID_DEFAULT_VALUE = true
+        const val PREFERENCE_USE_WATCHDOG = "use_watchdog"
+        const val PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE = true
 
     }
 }

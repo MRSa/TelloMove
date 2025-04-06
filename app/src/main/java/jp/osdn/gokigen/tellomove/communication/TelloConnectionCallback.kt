@@ -6,7 +6,7 @@ class TelloConnectionCallback(private val connection: IConnectionStatusUpdate) :
 {
     override fun commandResult(command: String, receivedStatus: Boolean, detail: String)
     {
-        Log.v(TAG, "commandResult: $command ($receivedStatus) $detail")
+        Log.v(TAG, "commandResult(connection): $command ($receivedStatus) $detail")
         try
         {
             val isConnect = detail.contains("ok")

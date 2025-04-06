@@ -58,7 +58,7 @@ class StatusReceiver(private val statusPortNo: Int = 8890)
         try
         {
             val receivedStatus = String(packet.data, 0, packet.length, Charset.forName("UTF-8"))
-            Log.v(TAG, " Status (length:${receivedStatus.length}) $receivedStatus ")
+            // ----- Log.v(TAG, " Status (length:${receivedStatus.length}) $receivedStatus ")
             if (::statusUpdateReport.isInitialized)
             {
                 statusUpdateReport.updateStatus(receivedStatus)

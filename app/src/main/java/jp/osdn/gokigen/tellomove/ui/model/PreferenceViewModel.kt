@@ -8,6 +8,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.core.content.edit
 import androidx.preference.PreferenceManager
+import jp.osdn.gokigen.tellomove.AppSingleton
 
 import jp.osdn.gokigen.tellomove.preference.IPreferencePropertyAccessor
 
@@ -16,17 +17,17 @@ class PreferenceViewModel: ViewModel()
     private lateinit var preference : SharedPreferences
 
 
-    private val getDataUsingProductId : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
-    val checkProductId: LiveData<Boolean> = getDataUsingProductId
+    private val usePollingCommand : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val useWatchdog: LiveData<Boolean> = usePollingCommand
 
     fun initializeViewModel(activity: AppCompatActivity)
     {
         try
         {
             preference = PreferenceManager.getDefaultSharedPreferences(activity)
-            getDataUsingProductId.value = preference.getBoolean(
-                IPreferencePropertyAccessor.PREFERENCE_CHECK_PRODUCT_ID,
-                IPreferencePropertyAccessor.PREFERENCE_CHECK_PRODUCT_ID_DEFAULT_VALUE
+            usePollingCommand.value = preference.getBoolean(
+                IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG,
+                IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE
             )
             Log.v(TAG, "PreferenceViewModel::initializeViewModel() ")
         }
@@ -36,7 +37,7 @@ class PreferenceViewModel: ViewModel()
         }
     }
 
-    fun setCheckProductId(value: Boolean)
+    fun setUseWatchDog(value: Boolean)
     {
         try
         {
@@ -45,10 +46,10 @@ class PreferenceViewModel: ViewModel()
                 Log.v(TAG, " Preference Manager is unknown...")
                 return
             }
-            preference.edit() {
-                putBoolean(IPreferencePropertyAccessor.PREFERENCE_CHECK_PRODUCT_ID, value)
+            preference.edit {
+                putBoolean(IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG, value)
             }
-            getDataUsingProductId.value = value
+            usePollingCommand.value = value
         }
         catch (e: Exception)
         {

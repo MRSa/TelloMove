@@ -18,7 +18,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import jp.osdn.gokigen.tellomove.R
 import jp.osdn.gokigen.tellomove.ui.model.PreferenceViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceViewModel)
@@ -51,9 +55,9 @@ fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceVie
             HorizontalDivider(thickness = 1.dp)
             ShowWifiSettings()
             Spacer(Modifier.size(padding))
-            //HorizontalDivider(thickness = 1.dp)
-            //SwitchCheckProductId(prefsModel)
-            //Spacer(Modifier.size(padding))
+            HorizontalDivider(thickness = 1.dp)
+            SwitchSetWatchdog(prefsModel)
+            Spacer(Modifier.size(padding))
             HorizontalDivider(thickness = 1.dp)
             ShowAboutGokigen()
             Spacer(Modifier.size(padding))
@@ -125,13 +129,12 @@ fun ShowWifiSettings()
     }
 }
 
-/*
 @Composable
-fun SwitchCheckProductId(prefsModel: PreferenceViewModel)
+fun SwitchSetWatchdog(prefsModel: PreferenceViewModel)
 {
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
-    val checkProductId = prefsModel.checkProductId.observeAsState()
+    val checkProductId = prefsModel.useWatchdog.observeAsState()
     Row (
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(horizontal = 4.dp)
@@ -140,23 +143,22 @@ fun SwitchCheckProductId(prefsModel: PreferenceViewModel)
             checked = checkProductId.value?: false,
             onCheckedChange = {
                 scope.launch {
-                    prefsModel.setCheckProductId(!(checkProductId.value?: false))
+                    prefsModel.setUseWatchDog(!(checkProductId.value?: false))
                 }
             })
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text = stringResource(R.string.label_switch_check_product_id),
+        Text(text = stringResource(R.string.label_switch_watchdog),
             fontSize = with(density) { 18.dp.toSp() },
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.clickable( onClick = {
-                scope.launch { prefsModel.setCheckProductId(!(checkProductId.value?: false)) }
+                scope.launch { prefsModel.setUseWatchDog(!(checkProductId.value?: false)) }
             })
         )
     }
-    Text(text = stringResource(R.string.description_switch_check_product_id),
+    Text(text = stringResource(R.string.description_switch_watchdog),
         color = MaterialTheme.colorScheme.secondary,
         fontSize = with(density) { 14.dp.toSp() },)
 }
-*/
 
 @Composable
 fun ShowAboutGokigen()

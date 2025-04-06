@@ -12,6 +12,9 @@
     <string name="pref_show_wifi_settings">Wi-Fi設定</string>
     <string name="pref_show_wifi_settings_detail">Wi-Fi設定画面を開きます。</string>
 
+    <string name="label_switch_watchdog">周期的にコマンド送信</string>
+    <string name="description_switch_watchdog"> 設定は、アプリ再起動後に有効となります。</string>
+
     <string name="label_switch_check_product_id">ID確認</string>
     <string name="description_switch_check_product_id"> </string>
 

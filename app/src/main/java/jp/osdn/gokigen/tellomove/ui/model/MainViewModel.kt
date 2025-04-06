@@ -5,9 +5,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.preference.PreferenceManager
 import jp.osdn.gokigen.tellomove.AppSingleton
 import jp.osdn.gokigen.tellomove.communication.IStatusUpdate
 import jp.osdn.gokigen.tellomove.communication.IConnectionStatusUpdate
+import jp.osdn.gokigen.tellomove.preference.IPreferencePropertyAccessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,6 +49,14 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
             currentSpeed.value = 20
             batteryRemain.value = -1
             lastCommand.value = false
+
+            // set preference to
+            val preference = PreferenceManager.getDefaultSharedPreferences(activity)
+            val useWatchdog = preference.getBoolean(
+                IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG,
+                IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE
+            )
+            AppSingleton.watchdog.setUseWatchdog(useWatchdog)
 
             // subscribe events
             AppSingleton.watchdog.setReportBatteryStatus(this)
@@ -119,8 +129,12 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
     {
         try
         {
-            CoroutineScope(Dispatchers.Main).launch {
-                statusMessageString.value = status
+            if (status.isNotEmpty())
+            {
+                CoroutineScope(Dispatchers.Main).launch {
+                    isConnected.value = true
+                    statusMessageString.value = status
+                }
             }
         }
         catch (e: Exception)
