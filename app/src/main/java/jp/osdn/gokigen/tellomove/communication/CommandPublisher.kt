@@ -86,7 +86,7 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
         {
             var result: Boolean
             var replyDetail = ""
-            DatagramSocket().use { socket ->
+            DatagramSocket(CLIENT_PORT_NUMBER).use { socket ->
                 val serverAddress = InetAddress.getByName(ipAddress)
                 val sendData = command.command.toByteArray(Charset.forName("UTF-8"))
                 val sendPacket = DatagramPacket(sendData, sendData.size, serverAddress, commandPortNo)
@@ -154,5 +154,6 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
         private const val BUFFER_SIZE = 384 * 1024 + 16  // 受信バッファは 384kB
         private const val COMMAND_POLL_QUEUE_MS = 35
         private const val COMMAND_SEND_TIMEOUT_MS = 3500  // 3500ms
+        private const val CLIENT_PORT_NUMBER = 32800
     }
 }
