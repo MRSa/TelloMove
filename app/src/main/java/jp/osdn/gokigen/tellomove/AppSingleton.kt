@@ -17,6 +17,7 @@ class AppSingleton : Application()
             Log.v(TAG, "AppSingleton::create()")
             publisher = CommandPublisher()
             receiver = StatusReceiver()
+            receiver2nd = StatusReceiver(statusPortNo = 8899, isDump = true)
             watchdog = StatusWatchDog()
             starter = ProcessStarter(this)
             startProcess()
@@ -35,6 +36,7 @@ class AppSingleton : Application()
             isInitialized = false
             publisher.stop()
             receiver.stopReceive()
+            receiver2nd.stopReceive()
             watchdog.stopWatchDog()
         }
         catch (e: Exception)
@@ -50,6 +52,7 @@ class AppSingleton : Application()
             if (!isInitialized)
             {
                 receiver.startReceive()
+                receiver2nd.startReceive()
                 publisher.start()
                 watchdog.startWatchDog()
                 isInitialized = true
@@ -74,6 +77,7 @@ class AppSingleton : Application()
     {
         lateinit var publisher: CommandPublisher
         lateinit var receiver: StatusReceiver
+        lateinit var receiver2nd: StatusReceiver
         lateinit var watchdog: StatusWatchDog
         lateinit var starter: ProcessStarter
         private const val WAIT_MS = 25L

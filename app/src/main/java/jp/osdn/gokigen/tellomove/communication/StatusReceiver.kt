@@ -6,7 +6,7 @@ import java.net.DatagramSocket
 import java.net.SocketTimeoutException
 import java.nio.charset.Charset
 
-class StatusReceiver(private val statusPortNo: Int = 8890)
+class StatusReceiver(private val statusPortNo: Int = 8890, private val isDump: Boolean = false)
 {
     private var isReceiving = false
     private lateinit var receiverSocket: DatagramSocket
@@ -58,7 +58,10 @@ class StatusReceiver(private val statusPortNo: Int = 8890)
         try
         {
             val receivedStatus = String(packet.data, 0, packet.length, Charset.forName("UTF-8"))
-            // ----- Log.v(TAG, " Status (length:${receivedStatus.length}) $receivedStatus ")
+            if (isDump)
+            {
+                Log.v(TAG, " Status (port:${statusPortNo}, length:${receivedStatus.length}) $receivedStatus ")
+            }
             if (::statusUpdateReport.isInitialized)
             {
                 statusUpdateReport.updateStatus(receivedStatus)
@@ -82,7 +85,7 @@ class StatusReceiver(private val statusPortNo: Int = 8890)
 
     companion object
     {
-        private val TAG = CommandPublisher::class.java.simpleName
+        private val TAG = StatusReceiver::class.java.simpleName
         private const val BUFFER_SIZE = 256 * 1024 + 16 // 受信バッファは 256kB
         private const val TIMEOUT_MS = 5500
     }
