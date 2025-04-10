@@ -9,6 +9,10 @@
     <string name="label_return_to_main_screen">戻る</string>
     <string name="label_switch_preference_screen">設定</string>
 
+    <string name="label_distance">移動距離(cm): </string>
+    <string name="label_rotation_degree">回転角: </string>
+    <string name="label_speed">速度(cm/s): </string>
+
     <string name="pref_show_wifi_settings">Wi-Fi設定</string>
     <string name="pref_show_wifi_settings_detail">Wi-Fi設定画面を開きます。</string>
 
