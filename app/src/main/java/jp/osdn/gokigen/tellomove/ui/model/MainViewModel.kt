@@ -19,6 +19,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
     private val isConnected : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isTelloConnected: LiveData<Boolean> = isConnected
 
+    private val isVideoStream : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val isVideoStreamOn: LiveData<Boolean> = isVideoStream
+
     private val statusMessageString : MutableLiveData<String> by lazy { MutableLiveData<String>() }
     val statusMessage : LiveData<String> = statusMessageString
 
@@ -43,6 +46,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         {
             Log.v(TAG, "MainViewModel::initializeViewModel()")
             statusMessageString.value = ""
+            isVideoStream.value = false
             isConnected.value = false
             moveDistance.value = 50
             turnDegree.value = 90
