@@ -22,6 +22,11 @@ class StatusWatchDog()
                     {
                         if (AppSingleton.publisher.isConnected()) {
                             AppSingleton.publisher.enqueueCommand("battery?", object : ICommandResult {
+
+                                override fun queuedCommand(command: String) {
+                                    Log.v(TAG, "QUEUED($command)")
+                                }
+
                                 override fun commandResult(command: String, receivedStatus: Boolean, detail: String) {
                                     Log.v(TAG, "RECEIVE($command) : $receivedStatus, $detail")
                                     try

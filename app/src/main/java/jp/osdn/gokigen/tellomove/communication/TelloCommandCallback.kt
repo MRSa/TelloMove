@@ -22,7 +22,7 @@ class TelloCommandCallback(private val updateReceiver: IStatusUpdate) : ICommand
         try
         {
             val isSuccess = detail.contains("ok")
-            updateReceiver.updateCommandStatus(command, isSuccess)
+            updateReceiver.updateCommandStatus(command, isSuccess, detail)
         }
         catch (e: Exception)
         {

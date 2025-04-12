@@ -5,6 +5,7 @@ import android.util.Log
 import jp.osdn.gokigen.tellomove.communication.CommandPublisher
 import jp.osdn.gokigen.tellomove.communication.StatusReceiver
 import jp.osdn.gokigen.tellomove.communication.StatusWatchDog
+import jp.osdn.gokigen.tellomove.communication.StreamReceiver
 
 class AppSingleton : Application()
 {
@@ -18,6 +19,7 @@ class AppSingleton : Application()
             publisher = CommandPublisher()
             receiver = StatusReceiver()
             receiver2nd = StatusReceiver(statusPortNo = 8899, isDump = true)
+            streamReceiver = StreamReceiver()
             watchdog = StatusWatchDog()
             starter = ProcessStarter(this)
             startProcess()
@@ -37,6 +39,7 @@ class AppSingleton : Application()
             publisher.stop()
             receiver.stopReceive()
             receiver2nd.stopReceive()
+            streamReceiver.stopReceive()
             watchdog.stopWatchDog()
         }
         catch (e: Exception)
@@ -53,6 +56,7 @@ class AppSingleton : Application()
             {
                 receiver.startReceive()
                 receiver2nd.startReceive()
+                streamReceiver.startReceive()
                 publisher.start()
                 watchdog.startWatchDog()
                 isInitialized = true
@@ -78,6 +82,7 @@ class AppSingleton : Application()
         lateinit var publisher: CommandPublisher
         lateinit var receiver: StatusReceiver
         lateinit var receiver2nd: StatusReceiver
+        lateinit var streamReceiver: StreamReceiver
         lateinit var watchdog: StatusWatchDog
         lateinit var starter: ProcessStarter
         private const val WAIT_MS = 25L

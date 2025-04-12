@@ -1,26 +1,34 @@
 package jp.osdn.gokigen.tellomove.ui.model
 
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.preference.PreferenceManager
 import jp.osdn.gokigen.tellomove.AppSingleton
+import jp.osdn.gokigen.tellomove.communication.IBitmapReceiver
 import jp.osdn.gokigen.tellomove.communication.IStatusUpdate
 import jp.osdn.gokigen.tellomove.communication.IConnectionStatusUpdate
 import jp.osdn.gokigen.tellomove.preference.IPreferencePropertyAccessor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import jp.osdn.gokigen.tellomove.R
 
-class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
+class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitmapReceiver
 {
     private val isConnected : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isTelloConnected: LiveData<Boolean> = isConnected
 
     private val isVideoStream : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isVideoStreamOn: LiveData<Boolean> = isVideoStream
+
+    private val informationMessageString : MutableLiveData<String> by lazy { MutableLiveData<String>() }
+    val informationMessage : LiveData<String> = informationMessageString
 
     private val statusMessageString : MutableLiveData<String> by lazy { MutableLiveData<String>() }
     val statusMessage : LiveData<String> = statusMessageString
@@ -37,14 +45,15 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
     private val batteryRemain : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
     val batteryPercent: LiveData<Int> = batteryRemain
 
-    private val lastCommand : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
-    val lastCommandStatus: LiveData<Boolean> = lastCommand
+    private val imageStreamBitmap : MutableLiveData<Bitmap> by lazy { MutableLiveData<Bitmap>() }
+    val imageBitmap: LiveData<Bitmap> = imageStreamBitmap
 
     fun initializeViewModel(activity: AppCompatActivity)
     {
         try
         {
             Log.v(TAG, "MainViewModel::initializeViewModel()")
+            informationMessageString.value = ""
             statusMessageString.value = ""
             isVideoStream.value = false
             isConnected.value = false
@@ -52,7 +61,11 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
             turnDegree.value = 90
             currentSpeed.value = 20
             batteryRemain.value = -1
-            lastCommand.value = false
+            val bitmap = ContextCompat.getDrawable(activity, R.drawable.tello)?.toBitmap()
+            if (bitmap != null)
+            {
+                imageStreamBitmap.value = bitmap
+            }
 
             // set preference to
             val preference = PreferenceManager.getDefaultSharedPreferences(activity)
@@ -65,6 +78,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
             // subscribe events
             AppSingleton.watchdog.setReportBatteryStatus(this)
             AppSingleton.receiver.setStatusUpdateReport(this)
+            AppSingleton.streamReceiver.setBitmapReceiver(this)
         }
         catch (e: Exception)
         {
@@ -114,6 +128,19 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         }
     }
 
+    private fun parseStatusInformation(status: String)
+    {
+        try
+        {
+            Log.v(TAG, "STATUS: $status")
+
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
     override fun queuedConnectionCommand(command: String)
     {
         try
@@ -147,6 +174,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
     {
         try
         {
+            parseStatusInformation(status)
             if (status.isNotEmpty())
             {
                 CoroutineScope(Dispatchers.Main).launch {
@@ -161,14 +189,15 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         }
     }
 
-    override fun updateCommandStatus(command: String, isSuccess: Boolean)
+    override fun updateCommandStatus(command: String, isSuccess: Boolean, detail: String)
     {
         try
         {
-            Log.v(TAG, "$command : $isSuccess")
+            val message = "$command : $detail "
+            Log.v(TAG, message)
             CoroutineScope(Dispatchers.Main).launch {
                 isConnected.value = true
-                lastCommand.value = isSuccess
+                informationMessageString.value = message
             }
         }
         catch (e: Exception)
@@ -183,6 +212,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         {
             CoroutineScope(Dispatchers.Main).launch {
                 isConnected.value = false
+                informationMessageString.value = "$command ..."
             }
         }
         catch (e: Exception)
@@ -203,6 +233,21 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         catch (e: Exception)
         {
             e.printStackTrace()
+        }
+    }
+
+    override fun updateBitmapImage(bitmap: Bitmap)
+    {
+        Log.v(TAG, "Received bitmap")
+        CoroutineScope(Dispatchers.Main).launch {
+            try
+            {
+                imageStreamBitmap.value = bitmap
+            }
+            catch (t: Throwable)
+            {
+                t.printStackTrace()
+            }
         }
     }
 

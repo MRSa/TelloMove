@@ -31,7 +31,7 @@ import jp.osdn.gokigen.tellomove.ui.model.MainViewModel
 @Composable
 fun ControlPadPanel(viewModel: MainViewModel)
 {
-    val statusMessage = viewModel.statusMessage.observeAsState()
+    val informationMessage = viewModel.informationMessage.observeAsState()
     val isConnected = viewModel.isTelloConnected.observeAsState()
     val isVideoOn = viewModel.isVideoStreamOn.observeAsState()
     val batteryPercentage = viewModel.batteryPercent.observeAsState()
@@ -178,7 +178,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
             ControlPadButton(viewModel, R.drawable.baseline_keyboard_arrow_left_24, true, "left ${viewModel.moveDistanceCm.value}", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_keyboard_arrow_right_24, true, "right ${viewModel.moveDistanceCm.value}", commandCallback)
-            ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
+            ControlPadButton(viewModel, R.drawable.baseline_indeterminate_check_box_24, true, "stop", commandCallback)
             Spacer(modifier = Modifier.weight(1.0f))
         }
         Spacer(modifier = Modifier.weight(1.0f))
@@ -222,7 +222,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
             )
             Spacer(modifier = Modifier.padding((4.dp)))
             Text(
-                text = statusMessage.value ?: "",
+                text = informationMessage.value ?: "",
                 modifier = Modifier.padding(start = 6.dp),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 12.sp
