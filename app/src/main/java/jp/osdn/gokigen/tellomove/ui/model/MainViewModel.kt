@@ -114,6 +114,20 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         }
     }
 
+    override fun queuedConnectionCommand(command: String)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                isConnected.value = false
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
     override fun setConnectionStatus(isConnect: Boolean)
     {
         try
@@ -153,7 +167,22 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate
         {
             Log.v(TAG, "$command : $isSuccess")
             CoroutineScope(Dispatchers.Main).launch {
+                isConnected.value = true
                 lastCommand.value = isSuccess
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    override fun queuedCommand(command: String)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                isConnected.value = false
             }
         }
         catch (e: Exception)

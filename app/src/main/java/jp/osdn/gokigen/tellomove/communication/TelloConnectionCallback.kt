@@ -4,6 +4,18 @@ import android.util.Log
 
 class TelloConnectionCallback(private val connection: IConnectionStatusUpdate) : ICommandResult
 {
+    override fun queuedCommand(command: String)
+    {
+        try
+        {
+            connection.queuedConnectionCommand(command)
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
     override fun commandResult(command: String, receivedStatus: Boolean, detail: String)
     {
         Log.v(TAG, "commandResult(connection): $command ($receivedStatus) $detail")

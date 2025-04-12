@@ -26,6 +26,7 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
         try
         {
             Log.v(TAG, "Enqueue : $command")
+            callback?.queuedCommand(command)
             return commandQueue.offer(TelloCommand(command, callback))
         }
         catch (e: Exception)
@@ -47,10 +48,6 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
                 {
                     isStarted = true
                     sendCommandMain()
-                    //while (isStarted)
-                    //{
-                    //    commandSender()
-                    //}
                 }
                 catch (e: Exception)
                 {
@@ -63,7 +60,6 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
             ee.printStackTrace()
         }
     }
-
 
     private fun sendCommandMain()
     {
@@ -124,7 +120,7 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
     }
 
 
-
+/*
     private fun commandSender()
     {
         try
@@ -191,6 +187,7 @@ class CommandPublisher(private val ipAddress: String = "192.168.10.1", private v
             ee.printStackTrace()
         }
     }
+*/
 
     fun stop()
     {
