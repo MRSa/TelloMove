@@ -132,8 +132,10 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     {
         try
         {
-            Log.v(TAG, "STATUS: $status")
-
+            if (isDump)
+            {
+                Log.v(TAG, "STATUS: $status")
+            }
         }
         catch (e: Exception)
         {
@@ -225,7 +227,10 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     {
         try
         {
-            Log.v(TAG, "BATTERY $percentage %")
+            if (isDump)
+            {
+                Log.v(TAG, "BATTERY $percentage %")
+            }
             CoroutineScope(Dispatchers.Main).launch {
                 batteryRemain.value = percentage
             }
@@ -254,5 +259,6 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     companion object
     {
         private val TAG = MainViewModel::class.java.simpleName
+        private const val isDump = false
     }
 }

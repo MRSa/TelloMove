@@ -5,12 +5,15 @@ import android.media.MediaCodec
 import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
 import java.nio.ByteBuffer
-import androidx.core.graphics.createBitmap
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 
+/*
 class StreamReceiver(private val streamPortNo: Int = 11111)
 {
     private var isReceiving = false
@@ -194,5 +197,197 @@ class StreamReceiver(private val streamPortNo: Int = 11111)
         private const val VIDEO_WIDTH = 960
         private const val VIDEO_HEIGHT = 720
         private const val MIME_TYPE = "video/avc"
+    }
+}
+*/
+
+class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT)
+{
+    companion object
+    {
+        private val TAG = StreamReceiver::class.java.simpleName
+        private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
+        private const val TIMEOUT_MS = 100L
+        private const val STREAM_PORT = 11111
+        private const val VIDEO_WIDTH = 960
+        private const val VIDEO_HEIGHT = 720
+    }
+
+    private val bufferSize = width * height * 3 / 2 // YUV420形式を想定
+    private val receiveQueue = ArrayBlockingQueue<ByteArray>(10)
+    private var running = false
+    private var decoder: MediaCodec? = null
+    private lateinit var bitmapReceiver: IBitmapReceiver
+
+    fun startReceive()
+    {
+        running = true
+        Thread { receiveData(streamPortNo) }.start()
+        Thread { decodeData() }.start()
+    }
+
+    fun stopReceive()
+    {
+        try
+        {
+            Log.v(TAG, "stopReceive()")
+            //running = false
+            //decoder?.stop()
+            //decoder?.release()
+            //decoder = null
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    private fun receiveData(port: Int)
+    {
+        val socket = DatagramSocket(port)
+        val buffer = ByteArray(BUFFER_SIZE) // 受信バッファサイズ
+        val packet = DatagramPacket(buffer, buffer.size)
+
+        try
+        {
+            while (running)
+            {
+                socket.receive(packet)
+                val receivedData = packet.data.copyOf(packet.length)
+                receiveQueue.offer(receivedData, TIMEOUT_MS, TimeUnit.MILLISECONDS) // キューに追加
+            }
+        }
+        catch (e: Exception)
+        {
+            Log.e(TAG, "Error receiving data: ${e.message}")
+        }
+        finally
+        {
+            socket.close()
+        }
+    }
+
+    private fun decodeData()
+    {
+        Log.v(TAG, "Start decodeData()")
+        try
+        {
+            val format = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height)
+            decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+            decoder?.configure(format, null, null, 0)
+            decoder?.start()
+
+            while (running)
+            {
+                try
+                {
+                    val data = receiveQueue.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    data?.let {
+                        try
+                        {
+                            val inputBufferIndex = decoder?.dequeueInputBuffer(TIMEOUT_MS)
+                            if (inputBufferIndex != null && inputBufferIndex >= 0)
+                            {
+                                val inputBuffer = decoder?.getInputBuffer(inputBufferIndex)
+                                inputBuffer?.clear()
+                                inputBuffer?.put(it)
+                                decoder?.queueInputBuffer(inputBufferIndex, 0, it.size, 0, 0)
+                            }
+                        }
+                        catch (xex: Exception)
+                        {
+                            // 例外を食べる
+                            // xex.printStackTrace()
+                        }
+
+                        val bufferInfo = MediaCodec.BufferInfo()
+                        var outputBufferIndex = decoder?.dequeueOutputBuffer(bufferInfo, 100)
+                        while (outputBufferIndex != null && outputBufferIndex >= 0)
+                        {
+                            // ここでデコードされたデータ（通常はYUV形式）を処理
+                            try
+                            {
+                                val yuvBytes = ByteArray(bufferSize)
+                                val outputBuffer = decoder?.getOutputBuffer(outputBufferIndex)
+                                outputBuffer?.position(bufferInfo.offset)
+                                outputBuffer?.limit(bufferInfo.offset + bufferInfo.size)
+                                outputBuffer?.get(yuvBytes)
+                                val bitmap = yuv420ToBitmap(yuvBytes, width, height)
+                                if (::bitmapReceiver.isInitialized)
+                                {
+                                    Log.v(TAG, "UPDATE BITMAP")
+                                    bitmapReceiver.updateBitmapImage(bitmap)
+                                }
+                            }
+                            catch (ee: Exception)
+                            {
+                                ee.printStackTrace()
+                            }
+
+                            // Bitmapへの変換は別の処理で行う必要があります。
+                            decoder?.releaseOutputBuffer(outputBufferIndex, false)
+                            outputBufferIndex = decoder?.dequeueOutputBuffer(bufferInfo, 0)
+                        }
+                    }
+                }
+                catch (ex: Exception)
+                {
+                    ex.printStackTrace()
+                }
+            }
+        }
+        catch (e: Exception)
+        {
+            Log.e(TAG, "Error decoding data: ${e.message}")
+        }
+        finally
+        {
+            Log.v(TAG, "Decoder Finished.")
+            try
+            {
+                decoder?.stop()
+                decoder?.release()
+                decoder = null
+            }
+            catch (ee: Exception)
+            {
+                ee.printStackTrace()
+            }
+        }
+    }
+
+    fun setBitmapReceiver(target: IBitmapReceiver)
+    {
+        bitmapReceiver = target
+    }
+
+    // YUVデータをBitmapに変換する関数（実装は非常に複雑）
+    private fun yuv420ToBitmap(yuvBytes: ByteArray, width: Int, height: Int): Bitmap
+    {
+        val out = IntArray(width * height)
+        val uIndex = width * height
+        val vIndex = width * height * 5 / 4
+        var yIndex = 0
+        var i = 0
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val yValue = (yuvBytes[yIndex++].toInt() and 0xff) - 16
+                val uValue = (yuvBytes[uIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
+                val vValue = (yuvBytes[vIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
+
+                var r = (1.164 * yValue + 1.596 * vValue).toInt()
+                var g = (1.164 * yValue - 0.391 * uValue - 0.813 * vValue).toInt()
+                var b = (1.164 * yValue + 2.018 * uValue).toInt()
+
+                r = r.coerceIn(0, 255)
+                g = g.coerceIn(0, 255)
+                b = b.coerceIn(0, 255)
+
+                out[i++] = 0xff000000.toInt() or (r shl 16) or (g shl 8) or b
+            }
+        }
+        val bitmap = createBitmap(width, height)
+        bitmap.setPixels(out, 0, width, 0, 0, width, height)
+        return bitmap
     }
 }
