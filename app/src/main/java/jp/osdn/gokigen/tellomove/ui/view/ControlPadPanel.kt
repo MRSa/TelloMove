@@ -1,5 +1,7 @@
 package jp.osdn.gokigen.tellomove.ui.view
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +19,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -61,6 +64,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
 
     val connectionCallback = TelloConnectionCallback(viewModel)
     val commandCallback = TelloCommandCallback(viewModel)
+    val context = LocalContext.current
 
     Column()
     {
@@ -146,6 +150,18 @@ fun ControlPadPanel(viewModel: MainViewModel)
                 Icon(
                     painter = painterResource(batteryIconId),
                     contentDescription = "Battery"
+                )
+            }
+            IconButton(
+                enabled = true,
+                onClick = {
+                    context.startActivity(Intent(Intent(Settings.ACTION_WIFI_SETTINGS)))
+                }
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_wifi_24),
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = "Wifi"
                 )
             }
         }
