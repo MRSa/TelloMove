@@ -6,6 +6,7 @@ import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.util.Log
 import androidx.core.graphics.createBitmap
+import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketTimeoutException
@@ -215,6 +216,7 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
 
     private val bufferSize = width * height * 3 / 2 // YUV420形式を想定
     private val receiveQueue = ArrayBlockingQueue<ByteArray>(100)
+    private val streamBuffer = ByteArrayOutputStream()
     private var running = false
     private lateinit var decoder: MediaCodec
     private lateinit var bitmapReceiver: IBitmapReceiver
@@ -248,14 +250,23 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         val socket = DatagramSocket(port)
         try
         {
+            var receiveCount = 0
             val buffer = ByteArray(BUFFER_SIZE) // メッセージ受信バッファ
             val packet = DatagramPacket(buffer, buffer.size)
             while (running)
             {
                 socket.receive(packet)
                 val receivedData = packet.data.copyOf(packet.length)
+                streamBuffer.write(receivedData, 0, packet.length)
+                if ((packet.length < 1000)||(receiveCount > 20))
+                {
+                    receiveQueue.offer(streamBuffer.toByteArray(), TIMEOUT_MS, TimeUnit.MILLISECONDS) // キューに追加
+                    streamBuffer.reset()
+                    receiveCount = 0
+                }
+                receiveCount++
                 //Log.v(TAG, "RECEIVED DATA : ${receivedData.size}")
-                receiveQueue.offer(receivedData, TIMEOUT_MS, TimeUnit.MILLISECONDS) // キューに追加
+                //receiveQueue.offer(receivedData, TIMEOUT_MS, TimeUnit.MILLISECONDS) // キューに追加
             }
         }
         catch (e: Exception)
