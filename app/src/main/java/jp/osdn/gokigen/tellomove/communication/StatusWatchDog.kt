@@ -3,7 +3,7 @@ package jp.osdn.gokigen.tellomove.communication
 import android.util.Log
 import jp.osdn.gokigen.tellomove.AppSingleton
 
-class StatusWatchDog()
+class StatusWatchDog
 {
     private var isStarted = false
     private var useWatchdog = true

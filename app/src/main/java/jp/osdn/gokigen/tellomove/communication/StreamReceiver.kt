@@ -2,205 +2,14 @@ package jp.osdn.gokigen.tellomove.communication
 
 import android.graphics.Bitmap
 import android.media.MediaCodec
-import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.util.Log
 import androidx.core.graphics.createBitmap
 import java.io.ByteArrayOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
-import java.net.SocketTimeoutException
-import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
-
-/*
-class StreamReceiver(private val streamPortNo: Int = 11111)
-{
-    private var isReceiving = false
-    private lateinit var receiverSocket: DatagramSocket
-    private lateinit var bitmapReceiver: IBitmapReceiver
-
-    private var decoder: MediaCodec? = null
-    private var inputBuffers: Array<ByteBuffer>? = null
-    private var outputBuffers: Array<ByteBuffer>? = null
-    private var outputFormat: MediaFormat? = null
-
-    fun startReceive()
-    {
-        val buffer = ByteArray(BUFFER_SIZE)
-        isReceiving = true
-        try
-        {
-            Thread {
-                try
-                {
-                    val format = MediaFormat.createVideoFormat(MIME_TYPE, VIDEO_WIDTH, VIDEO_HEIGHT)
-                    decoder = MediaCodec.createDecoderByType(MIME_TYPE)
-                    decoder?.configure(format, null, null, 0)
-                    decoder?.start()
-                    receiverSocket = DatagramSocket(streamPortNo)
-                }
-                catch (e: Exception)
-                {
-                    e.printStackTrace()
-                }
-                while (isReceiving)
-                {
-                    try
-                    {
-                        val receivePacket = DatagramPacket(buffer, buffer.size)
-                        inputBuffers = decoder?.inputBuffers
-                        outputBuffers = decoder?.outputBuffers
-                        outputFormat = decoder?.outputFormat
-
-                        if (::receiverSocket.isInitialized)
-                        {
-                            receiverSocket.soTimeout = TIMEOUT_MS
-                            receiverSocket.receive(receivePacket)
-
-                            val receivedData = receivePacket.data.copyOfRange(0, receivePacket.length)
-                            try
-                            {
-                                val inputBufferId = decoder?.dequeueInputBuffer(10000) ?: -1
-                                if (inputBufferId >= 0)
-                                {
-                                    val inputBuffer = inputBuffers?.get(inputBufferId)
-                                    inputBuffer?.clear()
-                                    inputBuffer?.put(receivedData)
-                                    decoder?.queueInputBuffer(
-                                        inputBufferId,
-                                        0,
-                                        receivedData.size,
-                                        0,
-                                        0
-                                    )
-                                }
-
-                                val bufferInfo = MediaCodec.BufferInfo()
-                                val outputBufferId = decoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
-                                if (outputBufferId >= 0) {
-                                    val outputBuffer = outputBuffers?.get(outputBufferId)
-                                    outputBuffer?.position(bufferInfo.offset)
-                                    outputBuffer?.limit(bufferInfo.offset + bufferInfo.size)
-
-                                    // YUV データを Bitmap に変換
-                                    if (outputFormat?.getInteger(MediaFormat.KEY_COLOR_FORMAT) ==
-                                        MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar
-                                    ) {
-                                        val yuvBytes = ByteArray(outputBuffer?.remaining()?: 0)
-                                        outputBuffer?.get(yuvBytes)
-                                        val bitmap = yuv420ToBitmap(
-                                            yuvBytes,
-                                            outputFormat?.getInteger(MediaFormat.KEY_WIDTH)?: VIDEO_WIDTH,
-                                            outputFormat?.getInteger(MediaFormat.KEY_HEIGHT)?: VIDEO_HEIGHT
-                                        )
-                                        if (::bitmapReceiver.isInitialized)
-                                        {
-                                            Log.v(TAG, "UPDATE BITMAP")
-                                            bitmapReceiver.updateBitmapImage(bitmap)
-                                        }
-                                    } else {
-                                        Log.w(TAG, "Unsupported color format: ${outputFormat?.getInteger(MediaFormat.KEY_COLOR_FORMAT)}")
-                                    }
-                                    decoder?.releaseOutputBuffer(outputBufferId, false)
-                                } else if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                                    outputFormat = decoder?.outputFormat
-                                    Log.i(TAG, "Output format changed: $outputFormat")
-                                    outputBuffers = decoder?.outputBuffers
-                                } else if (outputBufferId == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                                    Log.d(TAG, "No output buffer available...")
-                                }
-                            }
-                            catch (ee: Exception)
-                            {
-                                ee.printStackTrace()
-                            }
-                            //checkReceiveData(receivePacket)
-                        }
-                        else
-                        {
-                            Log.v(TAG, "receiveSocket is not initialized...")
-                        }
-                    }
-                    catch (_: SocketTimeoutException)
-                    {
-                        // do nothing
-                    }
-                    catch (e: Exception)
-                    {
-                        e.printStackTrace()
-                    }
-                }
-                try
-                {
-                    decoder?.stop()
-                    decoder?.release()
-                    receiverSocket.close()
-                }
-                catch (e: Exception)
-                {
-                    e.printStackTrace()
-                }
-            }.start()
-        }
-        catch (ee: Exception)
-        {
-            ee.printStackTrace()
-        }
-    }
-
-    private fun yuv420ToBitmap(yuvBytes: ByteArray, width: Int, height: Int): Bitmap
-    {
-        val out = IntArray(width * height)
-        val uIndex = width * height
-        val vIndex = width * height * 5 / 4
-        var yIndex = 0
-        var i = 0
-        for (y in 0 until height) {
-            for (x in 0 until width) {
-                val yValue = (yuvBytes[yIndex++].toInt() and 0xff) - 16
-                val uValue = (yuvBytes[uIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
-                val vValue = (yuvBytes[vIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
-
-                var r = (1.164 * yValue + 1.596 * vValue).toInt()
-                var g = (1.164 * yValue - 0.391 * uValue - 0.813 * vValue).toInt()
-                var b = (1.164 * yValue + 2.018 * uValue).toInt()
-
-                r = r.coerceIn(0, 255)
-                g = g.coerceIn(0, 255)
-                b = b.coerceIn(0, 255)
-
-                out[i++] = 0xff000000.toInt() or (r shl 16) or (g shl 8) or b
-            }
-        }
-        val bitmap = createBitmap(width, height)
-        bitmap.setPixels(out, 0, width, 0, 0, width, height)
-        return bitmap
-    }
-
-    fun stopReceive()
-    {
-        isReceiving = false
-    }
-
-    fun setBitmapReceiver(target: IBitmapReceiver)
-    {
-        bitmapReceiver = target
-    }
-
-    companion object
-    {
-        private val TAG = StreamReceiver::class.java.simpleName
-        private const val TIMEOUT_US = 10000L
-        private const val BUFFER_SIZE = 256 * 1024 + 16 // 受信バッファは 256kB
-        private const val TIMEOUT_MS = 5500
-        private const val VIDEO_WIDTH = 960
-        private const val VIDEO_HEIGHT = 720
-        private const val MIME_TYPE = "video/avc"
-    }
-}
-*/
 
 class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT)
 {
@@ -208,6 +17,8 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
     {
         private val TAG = StreamReceiver::class.java.simpleName
         private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
+        private const val BUFFER_COUNT = 6
+        private const val DATA_LENGTH_LIMIT = 1000
         private const val TIMEOUT_MS = 100L
         private const val STREAM_PORT = 11111
         private const val VIDEO_WIDTH = 960
@@ -247,6 +58,8 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
     private fun receiveUdpDataThread(port: Int)
     {
         // ----------  UDPのデータ受信スレッド
+        val startCode = byteArrayOf(0x00, 0x00, 0x01) // 一般的な開始コード
+        val longStartCode = byteArrayOf(0x00, 0x00, 0x00, 0x01) // 長い開始コード
         val socket = DatagramSocket(port)
         try
         {
@@ -257,16 +70,42 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
             {
                 socket.receive(packet)
                 val receivedData = packet.data.copyOf(packet.length)
-                streamBuffer.write(receivedData, 0, packet.length)
-                if ((packet.length < 1000)||(receiveCount > 20))
+
+/*
+                val index = findNalUnits(receivedData, startCode, longStartCode)
+                if (index < 0)
                 {
-                    receiveQueue.offer(streamBuffer.toByteArray(), TIMEOUT_MS, TimeUnit.MILLISECONDS) // キューに追加
+                    streamBuffer.write(receivedData, 0, packet.length)
+                }
+                else if (index == 0)
+                {
+                    val queuedData = streamBuffer.toByteArray()
+                    Log.v(TAG, " ----- Push data : ${queuedData.size} bytes.")
+                    receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    streamBuffer.reset()
+                }
+                else
+                {
+                    streamBuffer.write(receivedData, 0, index - 1)
+                    val queuedData = streamBuffer.toByteArray()
+                    Log.v(TAG, " ===== Push data : ${queuedData.size} bytes.")
+                    receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    streamBuffer.reset()
+                    streamBuffer.write(queuedData, index, (queuedData.size - index))
+                }
+*/
+                streamBuffer.write(receivedData, 0, packet.length)
+                //if ((packet.length < DATA_LENGTH_LIMIT)||(receiveCount > BUFFER_COUNT))
+                if (receiveCount > BUFFER_COUNT)
+                {
+                    val queuedData = streamBuffer.toByteArray()
+                    Log.v(TAG, " ----- Push data : ${queuedData.size} bytes. (receivedCount: $receiveCount)")
+                    receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                    streamBuffer.reset()
                     streamBuffer.reset()
                     receiveCount = 0
                 }
                 receiveCount++
-                //Log.v(TAG, "RECEIVED DATA : ${receivedData.size}")
-                //receiveQueue.offer(receivedData, TIMEOUT_MS, TimeUnit.MILLISECONDS) // キューに追加
             }
         }
         catch (e: Exception)
@@ -279,6 +118,74 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
             socket.close()
         }
     }
+
+    private fun findNalUnits(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray) : Int
+    {
+        var index = 0
+        while (index < data.size - 2)
+        {
+            var nalUnitLength = -1
+
+            // 長い開始コード (0x00 0x00 0x00 0x01) をチェック
+            if (index <= data.size - 4 && data[index] == longStartCode[0] && data[index + 1] == longStartCode[1] && data[index + 2] == longStartCode[2] && data[index + 3] == longStartCode[3])
+            {
+                nalUnitLength = 4
+            }
+            // 短い開始コード (0x00 0x00 0x01) をチェック (長い開始コードが見つからなかった場合)
+            else if (data[index] == startCode[0] && data[index + 1] == startCode[1] && data[index + 2] == startCode[2])
+            {
+                nalUnitLength = 3
+            }
+
+            if (nalUnitLength > 0)
+            {
+                return (index)
+            }
+            else
+            {
+                index++
+            }
+        }
+        return (-1)
+    }
+
+    private fun findNalUnitsOptimized(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray): Int {
+        val longStartCodeLength = longStartCode.size
+        val shortStartCodeLength = startCode.size
+        val dataSize = data.size
+
+        for (index in 0 until dataSize - 2) {
+            // まず長い開始コードをチェック
+            if (index <= dataSize - longStartCodeLength) {
+                var matchLong = true
+                for (i in 0 until longStartCodeLength) {
+                    if (data[index + i] != longStartCode[i]) {
+                        matchLong = false
+                        break
+                    }
+                }
+                if (matchLong) {
+                    return index
+                }
+            }
+
+            // 次に短い開始コードをチェック (長い開始コードのチェック範囲外の場合のみ)
+            if (index <= dataSize - shortStartCodeLength) {
+                var matchShort = true
+                for (i in 0 until shortStartCodeLength) {
+                    if (data[index + i] != startCode[i]) {
+                        matchShort = false
+                        break
+                    }
+                }
+                if (matchShort) {
+                    return index
+                }
+            }
+        }
+        return -1
+    }
+
 
     private fun initializeDecoder()
     {
@@ -301,7 +208,7 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
 
     private fun decodeDataThread()
     {
-        Log.v(TAG, "Start decodeData()")
+        Log.v(TAG, " ----- Start decodeDataThread()")
         try
         {
             initializeDecoder()
@@ -309,7 +216,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
             {
                 try
                 {
-                    Thread.sleep(TIMEOUT_MS)  // 取得前、少し待つ
                     val receivedUdpData = receiveQueue.poll(TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     receivedUdpData?.let {
                         if (::decoder.isInitialized)
@@ -340,7 +246,7 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                             var outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 100)
                             while (outputBufferIndex >= 0)
                             {
-                                // ここでデコードされたデータ（通常はYUV形式）を処理
+                                // デコードされたデータを処理
                                 try
                                 {
                                     val yuvBytes = ByteArray(bufferSize)
@@ -351,7 +257,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                                     val bitmap = yuv420ToBitmap(yuvBytes, width, height)
                                     if (::bitmapReceiver.isInitialized)
                                     {
-                                        Log.v(TAG, "UPDATE BITMAP (size: ${bitmap.width} x ${bitmap.height})")
                                         bitmapReceiver.updateBitmapImage(bitmap)
                                     }
                                 }
