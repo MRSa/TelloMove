@@ -45,6 +45,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     private val batteryRemain : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
     val batteryPercent: LiveData<Int> = batteryRemain
 
+    private val timeSec : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
+    val motorRunningTime: LiveData<Int> = timeSec
+
     private val imageStreamBitmap : MutableLiveData<Bitmap> by lazy { MutableLiveData<Bitmap>() }
     val imageBitmap: LiveData<Bitmap> = imageStreamBitmap
 
@@ -61,6 +64,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             turnDegree.value = 90
             currentSpeed.value = 20
             batteryRemain.value = -1
+            timeSec.value = 0
             val bitmap = ContextCompat.getDrawable(activity, R.drawable.tello)?.toBitmap()
             if (bitmap != null)
             {
@@ -136,12 +140,51 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             {
                 Log.v(TAG, "STATUS: $status")
             }
+
+            // ----- Stringデータを分割してそれぞれのデータを更新する
+            val statusList = status.split(";")
+            statusList.forEach { statusValue ->
+                val statusData = statusValue.split(":")
+                when (statusData[0]) {
+                    "bat" -> { updateBatteryRemain(statusData[1]) }
+                    "pitch"-> { }
+                    "roll" -> { }
+                    "yaw" -> { }
+                    "vgx" -> { }
+                    "vgy" -> { }
+                    "vgz" -> { }
+                    "templ" -> { }
+                    "temph" -> { }
+                    "tof" -> { }
+                    "h" -> { }
+                    "baro" -> { }
+                    "time" -> { updateUseMotorTime(statusData[1]) }
+                    "agx" -> { }
+                    "agy" -> { }
+                    "agz" -> { }
+                }
+            }
         }
         catch (e: Exception)
         {
             e.printStackTrace()
         }
     }
+
+    private fun updateUseMotorTime(useTimeSec: String)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                timeSec.value = useTimeSec.toIntOrNull() ?: 0
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
 
     override fun queuedConnectionCommand(command: String)
     {
