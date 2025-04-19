@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 import jp.osdn.gokigen.tellomove.R
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
-import kotlin.io.encoding.Base64
 
 class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitmapReceiver
 {
@@ -203,8 +202,10 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             CoroutineScope(Dispatchers.Main).launch {
                 isConnected.value = true
                 informationMessageString.value = message
-                if (isSuccess) {
-                    when (command) {
+                if (isSuccess)
+                {
+                    when (command)
+                    {
                         "streamon" -> { isVideoStream.value = true }
                         "streamoff" -> { isVideoStream.value = false }
                     }

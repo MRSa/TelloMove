@@ -17,8 +17,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
     {
         private val TAG = StreamReceiver::class.java.simpleName
         private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
-        private const val BUFFER_COUNT = 6
-        private const val DATA_LENGTH_LIMIT = 1000
         private const val TIMEOUT_MS = 100L
         private const val STREAM_PORT = 11111
         private const val VIDEO_WIDTH = 960
@@ -54,7 +52,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         }
     }
 
-
     private fun receiveUdpDataThread(port: Int)
     {
         // ----------  UDPのデータ受信スレッド
@@ -63,7 +60,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         val socket = DatagramSocket(port)
         try
         {
-            var receiveCount = 0
             val buffer = ByteArray(BUFFER_SIZE) // メッセージ受信バッファ
             val packet = DatagramPacket(buffer, buffer.size)
             while (running)
@@ -71,7 +67,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                 socket.receive(packet)
                 val receivedData = packet.data.copyOf(packet.length)
 
-/*
                 val index = findNalUnits(receivedData, startCode, longStartCode)
                 if (index < 0)
                 {
@@ -80,32 +75,18 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                 else if (index == 0)
                 {
                     val queuedData = streamBuffer.toByteArray()
-                    Log.v(TAG, " ----- Push data : ${queuedData.size} bytes.")
                     receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     streamBuffer.reset()
+                    streamBuffer.write(receivedData, 0, packet.length)
                 }
                 else
                 {
                     streamBuffer.write(receivedData, 0, index - 1)
                     val queuedData = streamBuffer.toByteArray()
-                    Log.v(TAG, " ===== Push data : ${queuedData.size} bytes.")
                     receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     streamBuffer.reset()
                     streamBuffer.write(queuedData, index, (queuedData.size - index))
                 }
-*/
-                streamBuffer.write(receivedData, 0, packet.length)
-                //if ((packet.length < DATA_LENGTH_LIMIT)||(receiveCount > BUFFER_COUNT))
-                if (receiveCount > BUFFER_COUNT)
-                {
-                    val queuedData = streamBuffer.toByteArray()
-                    Log.v(TAG, " ----- Push data : ${queuedData.size} bytes. (receivedCount: $receiveCount)")
-                    receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
-                    streamBuffer.reset()
-                    streamBuffer.reset()
-                    receiveCount = 0
-                }
-                receiveCount++
             }
         }
         catch (e: Exception)
@@ -119,7 +100,7 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         }
     }
 
-    private fun findNalUnits(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray) : Int
+    private fun findNalUnitsOrg(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray) : Int
     {
         var index = 0
         while (index < data.size - 2)
@@ -149,43 +130,52 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         return (-1)
     }
 
-    private fun findNalUnitsOptimized(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray): Int {
+    private fun findNalUnits(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray): Int
+    {
         val longStartCodeLength = longStartCode.size
         val shortStartCodeLength = startCode.size
         val dataSize = data.size
 
-        for (index in 0 until dataSize - 2) {
+        for (index in 0 until dataSize - 2)
+        {
             // まず長い開始コードをチェック
-            if (index <= dataSize - longStartCodeLength) {
+            if (index <= dataSize - longStartCodeLength)
+            {
                 var matchLong = true
-                for (i in 0 until longStartCodeLength) {
-                    if (data[index + i] != longStartCode[i]) {
+                for (i in 0 until longStartCodeLength)
+                {
+                    if (data[index + i] != longStartCode[i])
+                    {
                         matchLong = false
                         break
                     }
                 }
-                if (matchLong) {
+                if (matchLong)
+                {
                     return index
                 }
             }
 
             // 次に短い開始コードをチェック (長い開始コードのチェック範囲外の場合のみ)
-            if (index <= dataSize - shortStartCodeLength) {
+            if (index <= dataSize - shortStartCodeLength)
+            {
                 var matchShort = true
-                for (i in 0 until shortStartCodeLength) {
-                    if (data[index + i] != startCode[i]) {
+                for (i in 0 until shortStartCodeLength)
+                {
+                    if (data[index + i] != startCode[i])
+                    {
                         matchShort = false
                         break
                     }
                 }
-                if (matchShort) {
-                    return index
+                if (matchShort)
+                {
+                    return (index)
                 }
             }
         }
-        return -1
+        return (-1)
     }
-
 
     private fun initializeDecoder()
     {
@@ -220,7 +210,7 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                     receivedUdpData?.let {
                         if (::decoder.isInitialized)
                         {
-                            Log.v(TAG, "PICKED DATA (SIZE: ${it.size} )")
+                            // ----- Log.v(TAG, "PICKED DATA (SIZE: ${it.size} )")
                             try
                             {
                                 val inputBufferIndex = decoder.dequeueInputBuffer(TIMEOUT_MS)

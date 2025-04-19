@@ -11,9 +11,9 @@ import jp.osdn.gokigen.tellomove.ui.model.MainViewModel
 @Composable
 fun LiveViewPanel(viewModel: MainViewModel)
 {
-
+    val isStreaming = viewModel.isVideoStreamOn.observeAsState()
     val imageBitmap = viewModel.imageBitmap.observeAsState()
-    if (imageBitmap.value != null)
+    if ((isStreaming.value == true)&&(imageBitmap.value != null))
     {
         Image(
             bitmap = imageBitmap.value!!.asImageBitmap(),
@@ -24,7 +24,7 @@ fun LiveViewPanel(viewModel: MainViewModel)
     {
         Image(
             painter = painterResource(R.drawable.tello),
-            contentDescription = "Tello"
+            contentDescription = "Tello Logo"
         )
     }
 }
