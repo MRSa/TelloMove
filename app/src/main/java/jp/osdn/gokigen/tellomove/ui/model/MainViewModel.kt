@@ -231,16 +231,17 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
         }
     }
 
-    override fun updateBatteryRemain(percentage: Int)
+    override fun updateBatteryRemain(percentage: String)
     {
         try
         {
+            val percentageInt = (percentage.toFloatOrNull() ?: 0.0f).toInt()
             if (isDump)
             {
                 Log.v(TAG, "BATTERY $percentage %")
             }
             CoroutineScope(Dispatchers.Main).launch {
-                batteryRemain.value = percentage
+                batteryRemain.value = percentageInt
             }
         }
         catch (e: Exception)

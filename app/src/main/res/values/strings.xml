@@ -6,6 +6,8 @@
     <string name="label_disconnected">Disconnected</string>
     <string name="label_status">Status: </string>
     <string name="label_control">Controller</string>
+    <string name="label_response">Response: </string>
+    <string name="label_set">Set</string>
     <string name="label_return_to_main_screen">Return to Main</string>
     <string name="label_switch_preference_screen">Preferences</string>
 

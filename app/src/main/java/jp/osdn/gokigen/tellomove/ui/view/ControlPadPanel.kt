@@ -66,6 +66,12 @@ fun ControlPadPanel(viewModel: MainViewModel)
     val commandCallback = TelloCommandCallback(viewModel)
     val context = LocalContext.current
 
+    val moveDistance = viewModel.moveDistanceCm.value ?: 0
+    val moveDistanceCm = if (moveDistance < 20) { 20 } else if (moveDistance > 500) { 500 } else { moveDistance }
+
+    val moveDegreeValue = viewModel.moveDegree.value ?: 0
+    val moveDegree = if (moveDegreeValue < 1) { 1 } else if (moveDegreeValue > 360) { 360 } else { moveDegreeValue }
+
     Column()
     {
         HorizontalDivider(thickness = 1.dp)
@@ -172,11 +178,11 @@ fun ControlPadPanel(viewModel: MainViewModel)
         )
         {
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_expand_less_24, true, "forward ${viewModel.moveDistanceCm.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_expand_less_24, true, "forward $moveDistanceCm", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_upload_24, true, "up ${viewModel.moveDistanceCm.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_upload_24, true, "up $moveDistanceCm", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_flight_takeoff_24, true, "takeoff", commandCallback)
             Spacer(modifier = Modifier.weight(1.0f))
@@ -187,13 +193,13 @@ fun ControlPadPanel(viewModel: MainViewModel)
             modifier = Modifier.fillMaxWidth()
         )
         {
-            ControlPadButton(viewModel, R.drawable.baseline_undo_24, true, "ccw ${viewModel.moveDegree.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_undo_24, true, "ccw $moveDegree", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_redo_24, true, "cw ${viewModel.moveDegree.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_redo_24, true, "cw $moveDegree", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_keyboard_arrow_left_24, true, "left ${viewModel.moveDistanceCm.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_keyboard_arrow_left_24, true, "left $moveDistanceCm", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_keyboard_arrow_right_24, true, "right ${viewModel.moveDistanceCm.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_keyboard_arrow_right_24, true, "right $moveDistanceCm", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_indeterminate_check_box_24, true, "stop", commandCallback)
             Spacer(modifier = Modifier.weight(1.0f))
         }
@@ -204,11 +210,11 @@ fun ControlPadPanel(viewModel: MainViewModel)
         )
         {
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_expand_more_24, true, "back ${viewModel.moveDistanceCm.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_expand_more_24, true, "back $moveDistanceCm", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
-            ControlPadButton(viewModel, R.drawable.baseline_download_24, true, "down ${viewModel.moveDistanceCm.value}", commandCallback)
+            ControlPadButton(viewModel, R.drawable.baseline_download_24, true, "down $moveDistanceCm", commandCallback)
             ControlPadButton(viewModel, R.drawable.baseline_view_compact_24, false)
             ControlPadButton(viewModel, R.drawable.baseline_flight_land_24, true, "land", commandCallback)
             Spacer(modifier = Modifier.weight(1.0f))
@@ -222,16 +228,16 @@ fun ControlPadPanel(viewModel: MainViewModel)
         {
             IconButton(
                 enabled = (isConnected.value == true),
-                onClick = { }
+                onClick = {  AppSingleton.publisher.enqueueCommand("speed?", commandCallback) }
             ) {
                 Icon(
-                    painter = painterResource(R.drawable.baseline_sensors_24),
-                    contentDescription = "Get status Icon"
+                    painter = painterResource(R.drawable.baseline_speed_24),
+                    contentDescription = "Get speed"
                 )
             }
             Spacer(modifier = Modifier.padding((10.dp)))
             Text(
-                text = stringResource(R.string.label_status),
+                text = stringResource(R.string.label_response),
                 modifier = Modifier.padding(start = 6.dp),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp

@@ -31,9 +31,9 @@ class StatusWatchDog
                                     Log.v(TAG, "RECEIVE($command) : $receivedStatus, $detail")
                                     try
                                     {
-                                        if ((::reportBatteryStatus.isInitialized)&&(detail.isNotEmpty()))
+                                        if (::reportBatteryStatus.isInitialized)
                                         {
-                                            reportBatteryStatus.updateBatteryRemain(detail.toInt())
+                                            reportBatteryStatus.updateBatteryRemain(detail)
                                         }
                                     }
                                     catch (e: Exception)
