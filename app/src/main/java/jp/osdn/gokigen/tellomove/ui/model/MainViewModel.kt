@@ -18,8 +18,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import jp.osdn.gokigen.tellomove.R
-import java.io.ByteArrayOutputStream
-import java.security.MessageDigest
 
 class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitmapReceiver
 {
@@ -263,22 +261,6 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             {
                 t.printStackTrace()
             }
-        }
-    }
-
-    private fun calculateBitmapHash(bitmap: Bitmap): String {
-        return try {
-            val outputStream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream) // PNG形式で圧縮（可逆圧縮）
-            val bitmapData = outputStream.toByteArray()
-
-            val digest = MessageDigest.getInstance("SHA-256")
-            val hashBytes = digest.digest(bitmapData)
-
-            return (hashBytes.toString())
-        } catch (e: Exception) {
-            e.printStackTrace()
-            ""
         }
     }
 

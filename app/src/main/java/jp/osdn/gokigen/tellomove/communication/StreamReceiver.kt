@@ -55,8 +55,6 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
     private fun receiveUdpDataThread(port: Int)
     {
         // ----------  UDPのデータ受信スレッド
-        val startCode = byteArrayOf(0x00, 0x00, 0x01) // 一般的な開始コード
-        val longStartCode = byteArrayOf(0x00, 0x00, 0x00, 0x01) // 長い開始コード
         val socket = DatagramSocket(port)
         try
         {
@@ -67,7 +65,8 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                 socket.receive(packet)
                 val receivedData = packet.data.copyOf(packet.length)
 
-                val index = findNalUnits(receivedData, startCode, longStartCode)
+                // -----  データの区切り位置 ("0x00 0x00 0x00 0x01" と "0x00 0x00 0x01" )を探して応答
+                val index = findNalUnits(receivedData)
                 if (index < 0)
                 {
                     streamBuffer.write(receivedData, 0, packet.length)
@@ -100,38 +99,11 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         }
     }
 
-    private fun findNalUnitsOrg(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray) : Int
+    private fun findNalUnits(data: ByteArray): Int
     {
-        var index = 0
-        while (index < data.size - 2)
-        {
-            var nalUnitLength = -1
+        val startCode = byteArrayOf(0x00, 0x00, 0x01) // 一般的な開始コード
+        val longStartCode = byteArrayOf(0x00, 0x00, 0x00, 0x01) // 長い開始コード
 
-            // 長い開始コード (0x00 0x00 0x00 0x01) をチェック
-            if (index <= data.size - 4 && data[index] == longStartCode[0] && data[index + 1] == longStartCode[1] && data[index + 2] == longStartCode[2] && data[index + 3] == longStartCode[3])
-            {
-                nalUnitLength = 4
-            }
-            // 短い開始コード (0x00 0x00 0x01) をチェック (長い開始コードが見つからなかった場合)
-            else if (data[index] == startCode[0] && data[index + 1] == startCode[1] && data[index + 2] == startCode[2])
-            {
-                nalUnitLength = 3
-            }
-
-            if (nalUnitLength > 0)
-            {
-                return (index)
-            }
-            else
-            {
-                index++
-            }
-        }
-        return (-1)
-    }
-
-    private fun findNalUnits(data: ByteArray, startCode: ByteArray, longStartCode: ByteArray): Int
-    {
         val longStartCodeLength = longStartCode.size
         val shortStartCodeLength = startCode.size
         val dataSize = data.size
