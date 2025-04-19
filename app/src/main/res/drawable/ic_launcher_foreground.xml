@@ -6,7 +6,7 @@
   <group android:scaleX="0.5764557"
       android:scaleY="0.5764557"
       android:translateX="144.07222"
-      android:translateY="147.7498">>
+      android:translateY="147.7498">
         
       <path android:fillColor="#EEEEEE" android:fillType="evenOdd" android:pathData="M192.64,191.05 L223.61,166.93 337,312.55 450.39,166.93 481.36,191.05 361.88,344.5 481.36,497.95 450.39,522.07 337,376.45 223.61,522.07 192.64,497.95 312.12,344.5Z"/>
         
