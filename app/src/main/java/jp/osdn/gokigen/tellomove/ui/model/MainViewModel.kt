@@ -48,6 +48,15 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     private val timeSec : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
     val motorRunningTime: LiveData<Int> = timeSec
 
+    private val pitchValue : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
+    val pitch: LiveData<Int> = pitchValue
+
+    private val rollValue : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
+    val roll: LiveData<Int> = rollValue
+
+    private val yawValue : MutableLiveData<Int> by lazy { MutableLiveData<Int>() }
+    val yaw: LiveData<Int> = yawValue
+
     private val imageStreamBitmap : MutableLiveData<Bitmap> by lazy { MutableLiveData<Bitmap>() }
     val imageBitmap: LiveData<Bitmap> = imageStreamBitmap
 
@@ -65,6 +74,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             currentSpeed.value = 20
             batteryRemain.value = -1
             timeSec.value = 0
+            pitchValue.value = 0
+            rollValue.value = 0
+            yawValue.value = 0
             val bitmap = ContextCompat.getDrawable(activity, R.drawable.tello)?.toBitmap()
             if (bitmap != null)
             {
@@ -136,7 +148,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     {
         try
         {
-            if (isDump)
+            if (DUMP_LOG)
             {
                 Log.v(TAG, "STATUS: $status")
             }
@@ -147,9 +159,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
                 val statusData = statusValue.split(":")
                 when (statusData[0]) {
                     "bat" -> { updateBatteryRemain(statusData[1]) }
-                    "pitch"-> { }
-                    "roll" -> { }
-                    "yaw" -> { }
+                    "pitch"-> { updatePitch(statusData[1]) }
+                    "roll" -> { updateRoll(statusData[1] ) }
+                    "yaw" -> { updateYaw(statusData[1]) }
                     "vgx" -> { }
                     "vgy" -> { }
                     "vgz" -> { }
@@ -185,6 +197,47 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
         }
     }
 
+    private fun updatePitch(pitchData: String)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                pitchValue.value = pitchData.toIntOrNull() ?: 0
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    private fun updateRoll(rollData: String)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                rollValue.value = rollData.toIntOrNull() ?: 0
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    private fun updateYaw(yawData: String)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                yawValue.value = yawData.toIntOrNull() ?: 0
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
 
     override fun queuedConnectionCommand(command: String)
     {
@@ -279,7 +332,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
         try
         {
             val percentageInt = (percentage.toFloatOrNull() ?: 0.0f).toInt()
-            if (isDump)
+            if (DUMP_LOG)
             {
                 Log.v(TAG, "BATTERY $percentage %")
             }
@@ -311,6 +364,6 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     companion object
     {
         private val TAG = MainViewModel::class.java.simpleName
-        private const val isDump = false
+        private const val DUMP_LOG = false
     }
 }
