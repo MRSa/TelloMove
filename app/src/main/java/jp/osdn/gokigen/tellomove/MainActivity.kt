@@ -127,6 +127,22 @@ class MainActivity : AppCompatActivity()
         return super.onKeyDown(keyCode, event)
     }
 
+    override fun onDestroy()
+    {
+        try
+        {
+            if (::myMainViewModel.isInitialized)
+            {
+                myMainViewModel.onDestroy()
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+        super.onDestroy()
+    }
+
     companion object
     {
         private val TAG = MainActivity::class.java.simpleName

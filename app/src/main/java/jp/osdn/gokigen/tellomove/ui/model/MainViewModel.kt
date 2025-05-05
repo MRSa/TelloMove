@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import jp.osdn.gokigen.tellomove.R
 import jp.osdn.gokigen.tellomove.speakcommand.ISpeakCommandStatusUpdate
+import jp.osdn.gokigen.tellomove.speakcommand.SpeakTelloCommand
 
 class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUpdate, IStatusUpdate, IBitmapReceiver
 {
@@ -67,6 +68,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUp
     private val imageStreamBitmap : MutableLiveData<Bitmap> by lazy { MutableLiveData<Bitmap>() }
     val imageBitmap: LiveData<Bitmap> = imageStreamBitmap
 
+    private lateinit var speechEngine : SpeakTelloCommand
+    private var initializedSpeechEngine = false
+
     fun initializeViewModel(activity: AppCompatActivity)
     {
         try
@@ -104,6 +108,8 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUp
                 IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS_DEFAULT_VALUE
             )
             speakCommand.value = speakCommandValue
+
+            speechEngine = SpeakTelloCommand(activity, this)
 
             // subscribe events
             AppSingleton.watchdog.setReportBatteryStatus(this)
@@ -389,9 +395,45 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUp
         }
     }
 
+    override fun speechEngineInitialized(status: Boolean)
+    {
+        initializedSpeechEngine = status
+    }
+
     override fun setSpeakCommandStatus(isEnable: Boolean)
     {
         speakCommand.value = isEnable
+    }
+
+    fun doSpeakCommand(command: String)
+    {
+        // ----- 音声をしゃべらせる
+        try
+        {
+            if (::speechEngine.isInitialized)
+            {
+                speechEngine.speakTelloCommand(command)
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun onDestroy()
+    {
+        try
+        {
+            if (::speechEngine.isInitialized)
+            {
+                speechEngine.onDestroy()
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
     }
 
     companion object

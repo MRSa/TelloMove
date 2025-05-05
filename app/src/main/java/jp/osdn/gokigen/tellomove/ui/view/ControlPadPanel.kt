@@ -84,10 +84,15 @@ fun ControlPadPanel(viewModel: MainViewModel)
         )
         {
             IconButton(
-                enabled = (isConnected.value == false),
+                enabled = (isConnected.value == false)||(speakCommands.value == true),
                 onClick = {
                     AppSingleton.starter.start()
-                    AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                    if (speakCommands.value == true)
+                    {
+                        viewModel.doSpeakCommand("command")
+                    } else {
+                        AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                    }
                 }
             ) {
                 Icon(
@@ -103,14 +108,24 @@ fun ControlPadPanel(viewModel: MainViewModel)
                     .align(Alignment.CenterVertically)
                     .clickable {
                         AppSingleton.starter.start()
-                        AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                        if (speakCommands.value == true)
+                        {
+                            viewModel.doSpeakCommand("command")
+                        } else {
+                            AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                        }
                     }
             )
             IconButton(
                 enabled = false,
                 onClick = {
                     AppSingleton.starter.start()
-                    AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                    if (speakCommands.value == true)
+                    {
+                        viewModel.doSpeakCommand("command")
+                    } else {
+                        AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                    }
                 }
             ) {
                 Icon(
@@ -124,7 +139,12 @@ fun ControlPadPanel(viewModel: MainViewModel)
                 enabled = false,
                 onClick = {
                     AppSingleton.starter.start()
-                    AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                    if (speakCommands.value == true)
+                    {
+                        viewModel.doSpeakCommand("command")
+                    } else {
+                        AppSingleton.publisher.enqueueCommand("command", connectionCallback)
+                    }
                 }
             ) {
                 Icon(
@@ -149,7 +169,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
                     }
                     AppSingleton.starter.start()
                     if (speakCommands.value == true) {
-                        doSpeakCommand(command)
+                        viewModel.doSpeakCommand(command)
                     } else {
                         AppSingleton.publisher.enqueueCommand(command, commandCallback)
                     }
@@ -174,11 +194,11 @@ fun ControlPadPanel(viewModel: MainViewModel)
                         // ----- コマンドをしゃべらせる
                         if (isRecording)
                         {
-                            doSpeakCommand("rec_start")
+                            viewModel.doSpeakCommand("rec_start")
                         }
                         else
                         {
-                            doSpeakCommand("rec_stop")
+                            viewModel.doSpeakCommand("rec_stop")
                         }
                     }
                 }
@@ -293,12 +313,6 @@ fun ControlPadPanel(viewModel: MainViewModel)
     }
 }
 
-private fun doSpeakCommand(command: String)
-{
-    // ----- 音声をしゃべらせる
-
-}
-
 @Composable
 fun ControlPadButton(viewModel: MainViewModel, iconId: Int, isVisible: Boolean, command: String = "", callback : ICommandResult? = null)
 {
@@ -309,7 +323,7 @@ fun ControlPadButton(viewModel: MainViewModel, iconId: Int, isVisible: Boolean, 
         modifier = Modifier.alpha(if (isVisible) 1f else 0f),
         onClick = {
             if (speakCommands.value == true) {
-                doSpeakCommand(command)
+                viewModel.doSpeakCommand(command)
             } else {
                 AppSingleton.publisher.enqueueCommand(command, callback)
             }
