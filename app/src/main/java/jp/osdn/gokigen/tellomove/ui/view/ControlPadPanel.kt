@@ -37,9 +37,11 @@ fun ControlPadPanel(viewModel: MainViewModel)
     val informationMessage = viewModel.informationMessage.observeAsState()
     val isConnected = viewModel.isTelloConnected.observeAsState()
     val isVideoOn = viewModel.isVideoStreamOn.observeAsState()
+    val isVideoRecording = viewModel.isVideoRecordingOn.observeAsState()
     val batteryPercentage = viewModel.batteryPercent.observeAsState()
-    val connectedStringId = if (isConnected.value == true) { R.string.label_connected } else { R.string.label_disconnected }
-    val connectedIconId = if (isConnected.value == true) { R.drawable.baseline_import_export_24 } else { R.drawable.baseline_mobiledata_off_24 }
+    val speakCommands = viewModel.speakCommands.observeAsState()
+    val connectedStringId = if (speakCommands.value == true) { R.string.label_speaker_mode } else if (isConnected.value == true) { R.string.label_connected } else { R.string.label_disconnected }
+    val connectedIconId = if (speakCommands.value == true) { R.drawable.baseline_speaker_24 } else if (isConnected.value == true) { R.drawable.baseline_import_export_24 } else { R.drawable.baseline_mobiledata_off_24 }
     val battery = batteryPercentage.value ?: -1
     val batteryIconId = if (battery > 90) {
         R.drawable.baseline_battery_full_24
@@ -61,7 +63,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
         R.drawable.baseline_battery_alert_24
     }
     val videoStreamId = if (isVideoOn.value == true) { R.drawable.baseline_videocam_24 } else { R.drawable.baseline_videocam_off_24 }
-
+    val videoRecordingIconId = if (isVideoRecording.value == true) { R.drawable.baseline_stop_24 } else { R.drawable.baseline_fiber_manual_record_24 }
     val connectionCallback = TelloConnectionCallback(viewModel)
     val commandCallback = TelloCommandCallback(viewModel)
     val context = LocalContext.current
@@ -133,20 +135,57 @@ fun ControlPadPanel(viewModel: MainViewModel)
                 )
             }
             IconButton(
-                enabled = (isConnected.value == true),
+                enabled = (isConnected.value == true)||(speakCommands.value == true),
                 onClick = {
                     val command = if (isVideoOn.value == true) {
+                        if (isVideoRecording.value != true)
+                        {
+                            // ----- ビデオ録画中の時は録画を止める
+                            viewModel.setVideoRecordingMode(false)
+                        }
                         "streamoff"
                     } else {
                         "streamon"
                     }
                     AppSingleton.starter.start()
-                    AppSingleton.publisher.enqueueCommand(command, commandCallback)
+                    if (speakCommands.value == true) {
+                        doSpeakCommand(command)
+                    } else {
+                        AppSingleton.publisher.enqueueCommand(command, commandCallback)
+                    }
                 }
             ) {
                 Icon(
                     painter = painterResource(videoStreamId),
                     contentDescription = "video stream"
+                )
+            }
+            IconButton(
+                enabled = (isConnected.value == true)||(speakCommands.value == true),
+                onClick = {
+                    val isRecording = (isVideoRecording.value != true) // Tr: START / Fa: STOP
+                    if ((isConnected.value == true)&&(isVideoOn.value == true))
+                    {
+                        // ----- 記録開始・終了 (ビデオ受信中のみ実行）
+                        viewModel.setVideoRecordingMode(isRecording)
+                    }
+                    else if (speakCommands.value == true)
+                    {
+                        // ----- コマンドをしゃべらせる
+                        if (isRecording)
+                        {
+                            doSpeakCommand("rec_start")
+                        }
+                        else
+                        {
+                            doSpeakCommand("rec_stop")
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    painter = painterResource(videoRecordingIconId),
+                    contentDescription = "video recording"
                 )
             }
             IconButton(
@@ -237,7 +276,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
             }
             Spacer(modifier = Modifier.padding((10.dp)))
             Text(
-                text = stringResource(R.string.label_response),
+                text = if (speakCommands.value == true) { "" } else { stringResource(R.string.label_response) },
                 modifier = Modifier.padding(start = 6.dp),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp
@@ -254,14 +293,27 @@ fun ControlPadPanel(viewModel: MainViewModel)
     }
 }
 
+private fun doSpeakCommand(command: String)
+{
+    // ----- 音声をしゃべらせる
+
+}
+
 @Composable
 fun ControlPadButton(viewModel: MainViewModel, iconId: Int, isVisible: Boolean, command: String = "", callback : ICommandResult? = null)
 {
     val isConnected = viewModel.isTelloConnected.observeAsState()
+    val speakCommands = viewModel.speakCommands.observeAsState()
     IconButton(
-        enabled = (isConnected.value == true),
+        enabled = (isConnected.value == true)||(speakCommands.value == true),
         modifier = Modifier.alpha(if (isVisible) 1f else 0f),
-        onClick = { AppSingleton.publisher.enqueueCommand(command, callback) }
+        onClick = {
+            if (speakCommands.value == true) {
+                doSpeakCommand(command)
+            } else {
+                AppSingleton.publisher.enqueueCommand(command, callback)
+            }
+        }
     ) {
         Icon(
             painter = painterResource(iconId),

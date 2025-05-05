@@ -37,11 +37,11 @@ class MainActivity : AppCompatActivity()
             enableEdgeToEdge()
 
             ///////// INITIALIZATION /////////
-            myPreferenceViewModel = ViewModelProvider(this)[PreferenceViewModel::class.java]
-            myPreferenceViewModel.initializeViewModel(this)
-
             myMainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
             myMainViewModel.initializeViewModel(this)
+
+            myPreferenceViewModel = ViewModelProvider(this)[PreferenceViewModel::class.java]
+            myPreferenceViewModel.initializeViewModel(this, myMainViewModel)
 
             ///////// SET ROOT VIEW /////////
             rootComponent = ViewRootComponent(applicationContext)

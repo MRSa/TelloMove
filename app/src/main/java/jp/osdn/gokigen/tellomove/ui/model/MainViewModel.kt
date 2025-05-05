@@ -18,14 +18,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import jp.osdn.gokigen.tellomove.R
+import jp.osdn.gokigen.tellomove.speakcommand.ISpeakCommandStatusUpdate
 
-class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitmapReceiver
+class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUpdate, IStatusUpdate, IBitmapReceiver
 {
     private val isConnected : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isTelloConnected: LiveData<Boolean> = isConnected
 
+    private val speakCommand : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val speakCommands : LiveData<Boolean> = speakCommand
+
     private val isVideoStream : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isVideoStreamOn: LiveData<Boolean> = isVideoStream
+
+    private val isVideoRecording : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val isVideoRecordingOn : LiveData<Boolean> = isVideoRecording
 
     private val informationMessageString : MutableLiveData<String> by lazy { MutableLiveData<String>() }
     val informationMessage : LiveData<String> = informationMessageString
@@ -68,6 +75,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             informationMessageString.value = ""
             statusMessageString.value = ""
             isVideoStream.value = false
+            isVideoRecording.value = false
             isConnected.value = false
             moveDistance.value = 50
             turnDegree.value = 90
@@ -90,6 +98,12 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
                 IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE
             )
             AppSingleton.watchdog.setUseWatchdog(useWatchdog)
+
+            val speakCommandValue = preference.getBoolean(
+                IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS,
+                IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS_DEFAULT_VALUE
+            )
+            speakCommand.value = speakCommandValue
 
             // subscribe events
             AppSingleton.watchdog.setReportBatteryStatus(this)
@@ -268,6 +282,20 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
         }
     }
 
+    fun setVideoRecordingMode(isRecording: Boolean)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                isVideoRecording.value = isRecording
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
     override fun updateStatus(status: String)
     {
         try
@@ -359,6 +387,11 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
                 t.printStackTrace()
             }
         }
+    }
+
+    override fun setSpeakCommandStatus(isEnable: Boolean)
+    {
+        speakCommand.value = isEnable
     }
 
     companion object

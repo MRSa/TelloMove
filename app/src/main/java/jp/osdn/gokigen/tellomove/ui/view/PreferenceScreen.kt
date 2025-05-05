@@ -58,6 +58,8 @@ fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceVie
             HorizontalDivider(thickness = 1.dp)
             SwitchSetWatchdog(prefsModel)
             Spacer(Modifier.size(padding))
+            SwitchSetSpeakCommand(prefsModel)
+            Spacer(Modifier.size(padding))
             HorizontalDivider(thickness = 1.dp)
             ShowAboutGokigen()
             Spacer(Modifier.size(padding))
@@ -156,6 +158,37 @@ fun SwitchSetWatchdog(prefsModel: PreferenceViewModel)
         )
     }
     Text(text = stringResource(R.string.description_switch_watchdog),
+        color = MaterialTheme.colorScheme.secondary,
+        fontSize = with(density) { 14.dp.toSp() },)
+}
+
+@Composable
+fun SwitchSetSpeakCommand(prefsModel: PreferenceViewModel)
+{
+    val density = LocalDensity.current
+    val scope = rememberCoroutineScope()
+    val speakCommand = prefsModel.speakCommands.observeAsState()
+    Row (
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 4.dp)
+    ) {
+        Switch(
+            checked = speakCommand.value?: false,
+            onCheckedChange = {
+                scope.launch {
+                    prefsModel.setSpeakCommand(!(speakCommand.value?: false))
+                }
+            })
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = stringResource(R.string.pref_speak_command),
+            fontSize = with(density) { 18.dp.toSp() },
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable( onClick = {
+                scope.launch { prefsModel.setSpeakCommand(!(speakCommand.value?: false)) }
+            })
+        )
+    }
+    Text(text = stringResource(R.string.pref_detail_speak_command),
         color = MaterialTheme.colorScheme.secondary,
         fontSize = with(density) { 14.dp.toSp() },)
 }

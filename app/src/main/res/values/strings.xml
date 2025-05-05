@@ -24,6 +24,11 @@
     <string name="label_switch_check_product_id">Check ID</string>
     <string name="description_switch_check_product_id"> </string>
 
+    <string name="label_speaker_mode">Speak Command</string>
+    <string name="pref_speak_command">Speak Commands</string>
+    <string name="pref_detail_speak_command">Speak command words instead of sending to tello command.</string>
+
+
     <string name="pref_instruction_manual">Instruction</string>
     <string name="pref_instruction_manual_url">https://github.com/MRSa/TelloMove/blob/master/docs/README.md</string>
 

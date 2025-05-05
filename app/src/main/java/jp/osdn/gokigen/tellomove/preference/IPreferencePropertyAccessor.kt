@@ -9,5 +9,8 @@ interface IPreferencePropertyAccessor
         const val PREFERENCE_USE_WATCHDOG = "use_watchdog"
         const val PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE = true
 
+        const val PREFERENCE_SPEAK_COMMANDS = "speak_commands"
+        const val PREFERENCE_SPEAK_COMMANDS_DEFAULT_VALUE = false
+
     }
 }
