@@ -13,16 +13,6 @@ import java.util.concurrent.TimeUnit
 
 class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT)
 {
-    companion object
-    {
-        private val TAG = StreamReceiver::class.java.simpleName
-        private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
-        private const val TIMEOUT_MS = 100L
-        private const val STREAM_PORT = 11111
-        private const val VIDEO_WIDTH = 960
-        private const val VIDEO_HEIGHT = 720
-    }
-
     private val bufferSize = width * height * 3 / 2 // YUV420形式を想定
     private val receiveQueue = ArrayBlockingQueue<ByteArray>(100)
     private val streamBuffer = ByteArrayOutputStream()
@@ -45,6 +35,20 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
             running = false
             decoder.stop()
             decoder.release()
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun changeRecordingStreamStatus(onOff: Boolean)
+    {
+        try
+        {
+            // ---------- True: ビデオ録画の開始 / False ビデオ録画の終了
+            Log.v(TAG, "changeRecordingStreamStatus : $onOff")
+
         }
         catch (e: Exception)
         {
@@ -294,5 +298,15 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         val bitmap = createBitmap(width, height)
         bitmap.setPixels(out, 0, width, 0, 0, width, height)
         return bitmap
+    }
+
+    companion object
+    {
+        private val TAG = StreamReceiver::class.java.simpleName
+        private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
+        private const val TIMEOUT_MS = 100L
+        private const val STREAM_PORT = 11111
+        private const val VIDEO_WIDTH = 960
+        private const val VIDEO_HEIGHT = 720
     }
 }

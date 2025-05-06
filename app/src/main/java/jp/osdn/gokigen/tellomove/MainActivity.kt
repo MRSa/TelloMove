@@ -15,6 +15,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.ViewModelProvider
+import jp.osdn.gokigen.tellomove.ui.model.FileListViewModel
 import jp.osdn.gokigen.tellomove.ui.model.MainViewModel
 import jp.osdn.gokigen.tellomove.ui.model.PreferenceViewModel
 import jp.osdn.gokigen.tellomove.ui.view.ViewRootComponent
@@ -24,6 +25,7 @@ class MainActivity : AppCompatActivity()
     private lateinit var rootComponent : ViewRootComponent
     private lateinit var myMainViewModel : MainViewModel
     private lateinit var myPreferenceViewModel : PreferenceViewModel
+    private lateinit var myFileListViewModel: FileListViewModel
 
     override fun onCreate(savedInstanceState: Bundle?)
     {
@@ -43,9 +45,12 @@ class MainActivity : AppCompatActivity()
             myPreferenceViewModel = ViewModelProvider(this)[PreferenceViewModel::class.java]
             myPreferenceViewModel.initializeViewModel(this, myMainViewModel)
 
+            myFileListViewModel = ViewModelProvider(this)[FileListViewModel::class.java]
+            myFileListViewModel.initializeViewModel(this)
+
             ///////// SET ROOT VIEW /////////
             rootComponent = ViewRootComponent(applicationContext)
-            rootComponent.prepare(myMainViewModel, myPreferenceViewModel)
+            rootComponent.prepare(myMainViewModel, myPreferenceViewModel, myFileListViewModel)
             setContent {
                 rootComponent.Content()
             }
