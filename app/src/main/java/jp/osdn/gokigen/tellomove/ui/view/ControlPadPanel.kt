@@ -40,6 +40,8 @@ fun ControlPadPanel(viewModel: MainViewModel)
     val isVideoRecording = viewModel.isVideoRecordingOn.observeAsState()
     val batteryPercentage = viewModel.batteryPercent.observeAsState()
     val speakCommands = viewModel.speakCommands.observeAsState()
+    val moveDistanceCmValue = viewModel.moveDistanceCm.observeAsState()
+    val moveDegreeValue = viewModel.moveDegree.observeAsState()
     val connectedStringId = if (speakCommands.value == true) { R.string.label_speaker_mode } else if (isConnected.value == true) { R.string.label_connected } else { R.string.label_disconnected }
     val connectedIconId = if (speakCommands.value == true) { R.drawable.baseline_speaker_24 } else if (isConnected.value == true) { R.drawable.baseline_import_export_24 } else { R.drawable.baseline_mobiledata_off_24 }
     val battery = batteryPercentage.value ?: -1
@@ -68,11 +70,11 @@ fun ControlPadPanel(viewModel: MainViewModel)
     val commandCallback = TelloCommandCallback(viewModel)
     val context = LocalContext.current
 
-    val moveDistance = viewModel.moveDistanceCm.value ?: 0
+    val moveDistance = moveDistanceCmValue.value ?: 0
     val moveDistanceCm = if (moveDistance < 20) { 20 } else if (moveDistance > 500) { 500 } else { moveDistance }
 
-    val moveDegreeValue = viewModel.moveDegree.value ?: 0
-    val moveDegree = if (moveDegreeValue < 1) { 1 } else if (moveDegreeValue > 360) { 360 } else { moveDegreeValue }
+    val moveDegreeInt = moveDegreeValue.value ?: 0
+    val moveDegree = if (moveDegreeInt < 1) { 1 } else if (moveDegreeInt > 360) { 360 } else { moveDegreeInt }
 
     Column()
     {

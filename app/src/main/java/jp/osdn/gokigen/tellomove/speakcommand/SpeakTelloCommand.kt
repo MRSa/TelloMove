@@ -52,10 +52,10 @@ class SpeakTelloCommand(context: Context, private val callback: ISpeakCommandSta
         try
         {
             val keyword = when (telloCommand) {
-                "streamon" -> "録画,終了"
-                "streamoff" -> "録画,開始"
-                "rec_start" -> "録画,開始"
-                "rec_stop" -> "録画,終了"
+                "streamon" -> "録画終了"
+                "streamoff" -> "録画開始"
+                "rec_start" -> "録画開始"
+                "rec_stop" -> "録画終了"
                 "takeoff" -> "離陸"
                 "land" -> "着陸"
                 "command" -> "コマンド"
@@ -65,7 +65,7 @@ class SpeakTelloCommand(context: Context, private val callback: ISpeakCommandSta
             }
             if (keyword.isNotEmpty())
             {
-                Log.v(TAG, "===== 　SPEAK : $keyword 　=====")
+                Log.v(TAG, "===== 　SPEAK : $keyword ($telloCommand)　=====")
                 speakText(keyword)
             }
         }
@@ -79,7 +79,30 @@ class SpeakTelloCommand(context: Context, private val callback: ISpeakCommandSta
     {
         try
         {
-
+            var operation = ""
+            var numValue = 0
+            val command = telloCommand.split(" ")
+            if (command.isNotEmpty())
+            {
+                operation = command[0]
+            }
+            if (command.size >= 2)
+            {
+                numValue = try { command[1].toInt() } catch (ee: Exception) { 0 }
+            }
+            val word = when (operation)
+            {
+                "up" -> { if (numValue < 70) { "すこし上" } else { "うえ" }}
+                "down" -> { if (numValue < 70) { "すこし下" } else { "した" }}
+                "left" -> { if (numValue < 70) { "少しっ左" } else { "ひだり" }}
+                "right" -> { if (numValue < 70) { "すこしみぎぃ" } else { "みぎ" }}
+                "forward" -> { if (numValue < 70) { "すこし前" } else { "まえっ" }}
+                "back" -> { if (numValue < 70) { "すこし後ろ" } else { "後ろ" }}
+                "cw" -> { if (numValue < 60) { "ななめ右" } else { "右向き" }}
+                "ccw" -> { if (numValue < 60) { "ななめ左" } else { "左向き" }}
+                else -> { "" }
+            }
+            return (word)
         }
         catch (e: Exception)
         {
