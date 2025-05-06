@@ -33,5 +33,9 @@
         </activity>
         <meta-data android:name="android.max_aspect" android:value="ratio_float"/>
     </application>
-
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
 </manifest>

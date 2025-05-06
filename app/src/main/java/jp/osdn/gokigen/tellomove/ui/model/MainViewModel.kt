@@ -18,14 +18,22 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import jp.osdn.gokigen.tellomove.R
+import jp.osdn.gokigen.tellomove.speakcommand.ISpeakCommandStatusUpdate
+import jp.osdn.gokigen.tellomove.speakcommand.SpeakTelloCommand
 
-class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitmapReceiver
+class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUpdate, IStatusUpdate, IBitmapReceiver
 {
     private val isConnected : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isTelloConnected: LiveData<Boolean> = isConnected
 
+    private val speakCommand : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val speakCommands : LiveData<Boolean> = speakCommand
+
     private val isVideoStream : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val isVideoStreamOn: LiveData<Boolean> = isVideoStream
+
+    private val isVideoRecording : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
+    val isVideoRecordingOn : LiveData<Boolean> = isVideoRecording
 
     private val informationMessageString : MutableLiveData<String> by lazy { MutableLiveData<String>() }
     val informationMessage : LiveData<String> = informationMessageString
@@ -60,6 +68,9 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
     private val imageStreamBitmap : MutableLiveData<Bitmap> by lazy { MutableLiveData<Bitmap>() }
     val imageBitmap: LiveData<Bitmap> = imageStreamBitmap
 
+    private lateinit var speechEngine : SpeakTelloCommand
+    private var initializedSpeechEngine = false
+
     fun initializeViewModel(activity: AppCompatActivity)
     {
         try
@@ -68,6 +79,7 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             informationMessageString.value = ""
             statusMessageString.value = ""
             isVideoStream.value = false
+            isVideoRecording.value = false
             isConnected.value = false
             moveDistance.value = 50
             turnDegree.value = 90
@@ -90,6 +102,14 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
                 IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE
             )
             AppSingleton.watchdog.setUseWatchdog(useWatchdog)
+
+            val speakCommandValue = preference.getBoolean(
+                IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS,
+                IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS_DEFAULT_VALUE
+            )
+            speakCommand.value = speakCommandValue
+
+            speechEngine = SpeakTelloCommand(activity, this)
 
             // subscribe events
             AppSingleton.watchdog.setReportBatteryStatus(this)
@@ -268,6 +288,20 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
         }
     }
 
+    fun setVideoRecordingMode(isRecording: Boolean)
+    {
+        try
+        {
+            CoroutineScope(Dispatchers.Main).launch {
+                isVideoRecording.value = isRecording
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
     override fun updateStatus(status: String)
     {
         try
@@ -358,6 +392,47 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, IStatusUpdate, IBitma
             {
                 t.printStackTrace()
             }
+        }
+    }
+
+    override fun speechEngineInitialized(status: Boolean)
+    {
+        initializedSpeechEngine = status
+    }
+
+    override fun setSpeakCommandStatus(isEnable: Boolean)
+    {
+        speakCommand.value = isEnable
+    }
+
+    fun doSpeakCommand(command: String)
+    {
+        // ----- 音声をしゃべらせる
+        try
+        {
+            if (::speechEngine.isInitialized)
+            {
+                speechEngine.speakTelloCommand(command)
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun onDestroy()
+    {
+        try
+        {
+            if (::speechEngine.isInitialized)
+            {
+                speechEngine.onDestroy()
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
         }
     }
 

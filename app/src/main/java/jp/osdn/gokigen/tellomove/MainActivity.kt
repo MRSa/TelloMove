@@ -37,11 +37,11 @@ class MainActivity : AppCompatActivity()
             enableEdgeToEdge()
 
             ///////// INITIALIZATION /////////
-            myPreferenceViewModel = ViewModelProvider(this)[PreferenceViewModel::class.java]
-            myPreferenceViewModel.initializeViewModel(this)
-
             myMainViewModel = ViewModelProvider(this)[MainViewModel::class.java]
             myMainViewModel.initializeViewModel(this)
+
+            myPreferenceViewModel = ViewModelProvider(this)[PreferenceViewModel::class.java]
+            myPreferenceViewModel.initializeViewModel(this, myMainViewModel)
 
             ///////// SET ROOT VIEW /////////
             rootComponent = ViewRootComponent(applicationContext)
@@ -125,6 +125,22 @@ class MainActivity : AppCompatActivity()
             e.printStackTrace()
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onDestroy()
+    {
+        try
+        {
+            if (::myMainViewModel.isInitialized)
+            {
+                myMainViewModel.onDestroy()
+            }
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+        super.onDestroy()
     }
 
     companion object

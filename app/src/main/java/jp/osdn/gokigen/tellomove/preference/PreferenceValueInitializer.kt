@@ -21,6 +21,12 @@ class PreferenceValueInitializer
                         IPreferencePropertyAccessor.PREFERENCE_USE_WATCHDOG_DEFAULT_VALUE
                     )
                 }
+                if (!items.containsKey(IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS)) {
+                    putBoolean(
+                        IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS,
+                        IPreferencePropertyAccessor.PREFERENCE_SPEAK_COMMANDS_DEFAULT_VALUE
+                    )
+                }
             }
         }
         catch (e: Exception)
