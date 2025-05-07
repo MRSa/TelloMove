@@ -115,6 +115,8 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUp
             AppSingleton.watchdog.setReportBatteryStatus(this)
             AppSingleton.receiver.setStatusUpdateReport(this)
             AppSingleton.streamReceiver.setBitmapReceiver(this)
+
+            AppSingleton.streamReceiver.prepareFileOutputDirectory(activity)
         }
         catch (e: Exception)
         {

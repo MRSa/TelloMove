@@ -134,14 +134,14 @@ class LocalFileOperation(private val context: Context)
             val extStorageUri: Uri
             var movieUri: Uri? = null
             val values = ContentValues()
-            values.put(MediaStore.Images.Media.TITLE, fileName)
-            values.put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
-            values.put(MediaStore.Images.Media.MIME_TYPE, "video/avc")
+            values.put(MediaStore.Video.Media.TITLE, fileName)
+            values.put(MediaStore.Video.Media.DISPLAY_NAME, fileName)
+            values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             {
-                values.put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$outputDir/")
-                values.put(MediaStore.Images.Media.IS_PENDING, true)
-                extStorageUri = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+                values.put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$outputDir/")
+                values.put(MediaStore.Video.Media.IS_PENDING, true)
+                extStorageUri = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
                 Log.v(TAG, "---------- $fileName $values")
                 movieUri = resolver.insert(extStorageUri, values)
                 if (movieUri != null)
@@ -183,7 +183,7 @@ class LocalFileOperation(private val context: Context)
                     Log.v(TAG, " mkdir fail: $outputDir")
                 }
                 values.put(
-                    MediaStore.Images.Media.DATA, path.absolutePath + File.separator + fileName
+                    MediaStore.Video.Media.DATA, path.absolutePath + File.separator + fileName
                 )
                 val targetPath = File(outputDir + File.separator + fileName)
                 try
@@ -217,7 +217,7 @@ class LocalFileOperation(private val context: Context)
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             {
-                values.put(MediaStore.Images.Media.IS_PENDING, false)
+                values.put(MediaStore.Video.Media.IS_PENDING, false)
                 if (movieUri != null)
                 {
                     resolver.update(movieUri, values, null, null)

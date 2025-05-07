@@ -15,6 +15,7 @@
     <string name="label_rotation_degree">Rotation Degree: </string>
     <string name="label_speed">Speed(cm/s): </string>
 
+    <string name="file_list">File List</string>
     <string name="file_empty">No file.</string>
     <string name="dialog_progress_executing">Executing…</string>
 

@@ -56,6 +56,9 @@ fun MovieFileList(listViewModel: FileListViewModel)
             contentPadding = PaddingValues(bottom = 80.dp), // 末尾に 80dpの余白を設ける
             state = listState
         ) {
+            item {
+                Text(stringResource(R.string.file_list))
+            }
             this.items(fileList.size) { index ->
                 key(index) {
                     FileItem(listViewModel, fileList[index])

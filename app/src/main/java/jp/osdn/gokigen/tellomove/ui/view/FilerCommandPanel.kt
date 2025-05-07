@@ -124,7 +124,7 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         }
         IconButton(
             enabled = true,
-            onClick = { }
+            onClick = { exportSingleFileConfirm = true }
         ) {
             Icon(
                 painter = painterResource(R.drawable.baseline_save_alt_24),
