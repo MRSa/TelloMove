@@ -124,8 +124,9 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                     {
                         try
                         {
-                            val fileOutputData = queuedData.copyOf()
-                            outputByteArrayToFile(fileOutputData)
+                            //val fileOutputData = queuedData.copyOf()
+                            //outputByteArrayToFile(fileOutputData)
+                            outputByteArrayToFile(queuedData)
                         }
                         catch (ee: Exception)
                         {
@@ -144,8 +145,9 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                     {
                         try
                         {
-                            val fileOutputData = queuedData.copyOf()
-                            outputByteArrayToFile(fileOutputData)
+                            //val fileOutputData = queuedData.copyOf()
+                            //outputByteArrayToFile(fileOutputData)
+                            outputByteArrayToFile(queuedData)
                         }
                         catch (ee: Exception)
                         {

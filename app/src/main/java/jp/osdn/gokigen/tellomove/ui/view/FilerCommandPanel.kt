@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import jp.osdn.gokigen.tellomove.R
+import jp.osdn.gokigen.tellomove.file.IFileOperationNotify
 import jp.osdn.gokigen.tellomove.ui.model.FileListViewModel
 
 @Composable
@@ -34,6 +35,7 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
     var deleteAllFileConfirm by remember { mutableStateOf(false) }
     var deleteSingleFileConfirm by remember { mutableStateOf(false) }
     var exportSingleFileConfirm by remember { mutableStateOf(false) }
+    var finishExportNotify by remember { mutableStateOf(false) }
     val selectedFileName = listViewModel.selectedFileName.observeAsState()
 
     val density = LocalDensity.current
@@ -205,7 +207,11 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
                     Button(
                         onClick = {
                             exportSingleFileConfirm = false
-                            listViewModel.exportMovieFile(targetFileName)
+                            listViewModel.exportMovieFile(targetFileName, object: IFileOperationNotify {
+                                override fun onCompletedExport(result: Boolean, fileName: String) {
+                                    finishExportNotify = true
+                                }
+                            })
                         }
                     ) {
                         Text(text = stringResource(R.string.dialog_button_ok))
@@ -222,5 +228,24 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         {
             exportSingleFileConfirm = false
         }
+    }
+
+    if (finishExportNotify)
+    {
+        // ----- エクスポートの実行終了通知
+        AlertDialog(
+            onDismissRequest = { finishExportNotify = false },
+            title = { Text(text = stringResource(R.string.dialog_title_finish_export)) },
+            text = { Text(text = stringResource(R.string.dialog_message_finish_export)) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        finishExportNotify = false
+                    }
+                ) {
+                    Text(text = stringResource(R.string.dialog_button_ok))
+                }
+            }
+        )
     }
 }

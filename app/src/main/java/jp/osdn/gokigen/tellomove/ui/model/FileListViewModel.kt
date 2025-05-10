@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import jp.osdn.gokigen.tellomove.file.IFileOperationNotify
 import jp.osdn.gokigen.tellomove.file.LocalFileOperation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -86,9 +87,10 @@ class FileListViewModel: ViewModel()
         }
     }
 
-    fun exportMovieFile(fileName: String)
+    fun exportMovieFile(fileName: String, callback: IFileOperationNotify)
     {
         CoroutineScope(Dispatchers.Main).launch {
+            var result = false
             try
             {
                 if (::fileOperation.isInitialized)
@@ -97,12 +99,14 @@ class FileListViewModel: ViewModel()
                     fileOperation.exportMovieFile(fileName)
                     _executing.value = false
                     _selectedFileName.value = ""
+                    result = true
                 }
             }
             catch (t: Throwable)
             {
                 t.printStackTrace()
             }
+            callback.onCompletedExport(result, fileName)
         }
     }
 
