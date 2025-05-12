@@ -17,7 +17,9 @@
 
     <string name="file_list">File List</string>
     <string name="file_empty">No file.</string>
+
     <string name="dialog_progress_executing">Executing…</string>
+    <string name="dialog_progress_exporting">Exporting… please Wait…</string>
 
     <string name="dialog_title_finish_export">Finished Export</string>
     <string name="dialog_message_finish_export">Export is completed.</string>

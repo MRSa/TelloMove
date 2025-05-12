@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "jp.osdn.gokigen.tellomove"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "jp.osdn.gokigen.tellomove"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 10001
         versionName = "1.0.1"
     }

@@ -114,9 +114,27 @@ class LocalFileOperation(private val context: Context)
         }
     }
 
-    fun exportMovieFile(fileName: String, outputDir :String = "TelloMove"): Boolean
+    fun exportMovieFile(fileName: String, callback: IFileOperationNotify, outputDir :String = "TelloMove")
     {
-        //  ----- ビットマップデータを(JPEG形式で)保管する。
+        var result = false
+        try
+        {
+            Thread {
+                result = exportMovieFileImpl(fileName, outputDir)
+                callback.onCompletedExport(result, fileName)
+            }.start()
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+            callback.onCompletedExport(false, fileName)
+        }
+        return
+    }
+
+    private fun exportMovieFileImpl(fileName: String, outputDir :String = "TelloMove"): Boolean
+    {
+        //  ----- 動画データを出力する
         var result = false
         try
         {

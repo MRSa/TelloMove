@@ -17,7 +17,9 @@
 
     <string name="file_list">録画ファイル一覧</string>
     <string name="file_empty">ファイル無し</string>
+
     <string name="dialog_progress_executing">実行中…</string>
+    <string name="dialog_progress_exporting">エクスポート実行中… しばらくお待ちください…</string>
 
     <string name="dialog_title_finish_export">エクスポート完了</string>
     <string name="dialog_message_finish_export">エクスポートが完了しました。</string>

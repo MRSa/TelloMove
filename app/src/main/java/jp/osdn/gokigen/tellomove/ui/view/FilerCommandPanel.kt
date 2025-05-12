@@ -2,11 +2,14 @@ package jp.osdn.gokigen.tellomove.ui.view
 
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -36,7 +40,9 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
     var deleteSingleFileConfirm by remember { mutableStateOf(false) }
     var exportSingleFileConfirm by remember { mutableStateOf(false) }
     var finishExportNotify by remember { mutableStateOf(false) }
+    var isExporting by remember { mutableStateOf(false) }
     val selectedFileName = listViewModel.selectedFileName.observeAsState()
+    val context = LocalContext.current
 
     val density = LocalDensity.current
     Spacer(Modifier.size(12.dp))
@@ -130,7 +136,7 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         ) {
             Icon(
                 painter = painterResource(R.drawable.baseline_save_alt_24),
-                contentDescription = "delete"
+                contentDescription = "Export"
             )
         }
     }
@@ -207,8 +213,10 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
                     Button(
                         onClick = {
                             exportSingleFileConfirm = false
-                            listViewModel.exportMovieFile(targetFileName, object: IFileOperationNotify {
+                            isExporting = true
+                            listViewModel.exportMovieFile(context, targetFileName, object: IFileOperationNotify {
                                 override fun onCompletedExport(result: Boolean, fileName: String) {
+                                    isExporting = false
                                     finishExportNotify = true
                                 }
                             })
@@ -230,9 +238,25 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         }
     }
 
+    if (isExporting)
+    {
+        val message = stringResource(R.string.dialog_progress_exporting)
+        AlertDialog(
+            onDismissRequest = { },
+            title = { Text(message) },
+            text = {
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            },
+            confirmButton = { },
+            dismissButton = null
+        )
+    }
     if (finishExportNotify)
     {
         // ----- エクスポートの実行終了通知
+        isExporting = false
         AlertDialog(
             onDismissRequest = { finishExportNotify = false },
             title = { Text(text = stringResource(R.string.dialog_title_finish_export)) },
@@ -248,4 +272,5 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
             }
         )
     }
+
 }
