@@ -99,8 +99,9 @@ class FileListViewModel: ViewModel()
                     if (::fileOperation.isInitialized) {
                         _executing.value = true
 
+                        val outputFileName = fileName.replace(".mov","")
                         val converter = NALToMP4Converter2(context)
-                        converter.convertNALToMp4(fileName, fileName)
+                        converter.convertNALToMp4(fileName, outputFileName)
 
 /*
                         NalToMp4Converter.convertNalToMp4(

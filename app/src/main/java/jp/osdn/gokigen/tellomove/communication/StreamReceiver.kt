@@ -16,7 +16,7 @@ import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 
-class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT)
+class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT, private val isDumpLog : Boolean = false)
 {
     private val bufferSize = width * height * 3 / 2 // YUV420形式を想定
     private val receiveQueue = ArrayBlockingQueue<ByteArray>(100)
@@ -286,6 +286,73 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                             {
                                 // 例外を食べる
                                 xex.printStackTrace()
+                            }
+
+                            if (isDumpLog)
+                            {
+                                try
+                                {
+                                    val forLog = decoder.outputFormat
+                                    Log.d(TAG, "Output format obtained.")
+
+                                    // 6. 取得した設定値 (出力フォーマット) をログに出力します
+                                    Log.i(TAG, "--- Decoder Configuration (Output Format) ---")
+                                    Log.i(
+                                        TAG,
+                                        "  mime: " + forLog.getString(MediaFormat.KEY_MIME)
+                                    )
+                                    if (forLog.containsKey(MediaFormat.KEY_WIDTH)) {
+                                        Log.i(
+                                            TAG,
+                                            "  width: " + forLog.getInteger(MediaFormat.KEY_WIDTH)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_HEIGHT)) {
+                                        Log.i(
+                                            TAG,
+                                            "  height: " + forLog.getInteger(MediaFormat.KEY_HEIGHT)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_COLOR_FORMAT)) {
+                                        Log.i(
+                                            TAG,
+                                            "  color-format: " + forLog.getInteger(MediaFormat.KEY_COLOR_FORMAT)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_FRAME_RATE)) {
+                                        Log.i(
+                                            TAG,
+                                            "  frame-rate: " + forLog.getFloat(MediaFormat.KEY_FRAME_RATE)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_BIT_RATE)) {
+                                        Log.i(
+                                            TAG,
+                                            "  bit-rate: " + forLog.getFloat(MediaFormat.KEY_BIT_RATE)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_CAPTURE_RATE)) {
+                                        Log.i(
+                                            TAG,
+                                            "  capture-rate: " + forLog.getFloat(MediaFormat.KEY_CAPTURE_RATE)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_I_FRAME_INTERVAL)) {
+                                        Log.i(
+                                            TAG,
+                                            "  i-frame-interval: " + forLog.getInteger(
+                                                MediaFormat.KEY_I_FRAME_INTERVAL
+                                            )
+                                        )
+                                    }
+                                    // 他にも必要なキーがあれば追加してください
+                                    // MediaFormat.KEY_BIT_RATE, MediaFormat.KEY_SAMPLE_RATE, MediaFormat.KEY_CHANNEL_COUNT など
+                                    Log.i(TAG, "---------------------------------------------")
+                                }
+                                catch (exxx: Exception)
+                                {
+                                    exxx.printStackTrace()
+                                }
                             }
 
                             val bufferInfo = MediaCodec.BufferInfo()
