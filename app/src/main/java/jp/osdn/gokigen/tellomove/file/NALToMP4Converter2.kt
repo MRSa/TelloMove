@@ -97,11 +97,7 @@ class NALToMP4Converter2(private val context: Context)
             // 3. MediaCodec デコーダを初期化 (入力NALユニット用)
             // NALファイルのビデオコーデックタイプ (例: H.264/AVC) を決定します。
             // ここではAVCと仮定しています。実際のアプリでは、NALユニットを検査して特定する必要があります。
-            val inputFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, VIDEO_WIDTH, VIDEO_HEIGHT).apply {
-                // 必要に応じて、NALファイルからSPS/PPSなどのCSD (Codec Specific Data) をここに追加
-                // putByteBuffer("csd-0", spsByteBuffer);
-                // putByteBuffer("csd-1", ppsByteBuffer);
-            }
+            val inputFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, VIDEO_WIDTH, VIDEO_HEIGHT)
             decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
             // 出力サーフェスは不要 (rawバッファにデコードするため)
             decoder?.configure(inputFormat, null, null, 0)
@@ -114,6 +110,7 @@ class NALToMP4Converter2(private val context: Context)
                 setInteger(MediaFormat.KEY_BIT_RATE, VIDEO_BITRATE)
                 setInteger(MediaFormat.KEY_FRAME_RATE, VIDEO_FRAME_RATE)
                 setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VIDEO_I_FRAME_INTERVAL) // キーフレーム間隔
+
                 // プロファイルとレベルを設定することも可能:
                 // setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileHigh);
                 // setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel31);

@@ -34,7 +34,8 @@
     <string name="dialog_description_delete_single_confirm">Delete file: </string>
 
     <string name="dialog_title_export_single_confirm">Export file</string>
-    <string name="dialog_description_export_single_confirm">Export file: </string>
+    <string name="dialog_description_export_single_confirm">Export file. 　: </string>
+    <string name="dialog_description_export_single_confirm_notice">* Conversion to MP4 (with ffmpeg etc.) needed after export.</string>
 
     <string name="pref_show_wifi_settings">Wi-Fi Settings</string>
     <string name="pref_show_wifi_settings_detail">Show Wi-Fi Settings Screen</string>

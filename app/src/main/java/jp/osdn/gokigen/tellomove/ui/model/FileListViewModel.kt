@@ -1,16 +1,14 @@
 package jp.osdn.gokigen.tellomove.ui.model
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import jp.osdn.gokigen.tellomove.file.ExportMovieFile
 import jp.osdn.gokigen.tellomove.file.IFileOperationNotify
 import jp.osdn.gokigen.tellomove.file.LocalFileOperation
-import jp.osdn.gokigen.tellomove.file.NALToMP4Converter2
-import jp.osdn.gokigen.tellomove.file.NalToMp4Converter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,7 +31,6 @@ class FileListViewModel: ViewModel()
         CoroutineScope(Dispatchers.Main).launch {
             try
             {
-                //_updatedFileList.value = false
                 fileOperation = LocalFileOperation(activity)
                 _fileNameList.value = fileOperation.getFileList()
                 _executing.value = false
@@ -99,33 +96,13 @@ class FileListViewModel: ViewModel()
                     if (::fileOperation.isInitialized) {
                         _executing.value = true
 
-                        val outputFileName = fileName.replace(".mov","")
-                        val converter = NALToMP4Converter2(context)
-                        converter.convertNALToMp4(fileName, outputFileName)
+                        //val outputFileName = fileName.replace(".mov","")
+                        //val converter = NALToMP4Converter2(context)
+                        //converter.convertNALToMp4(fileName, outputFileName)
 
-/*
-                        NalToMp4Converter.convertNalToMp4(
-                            context = context,
-                            nalFileName = fileName,
-                            outputFileName = fileName,
-                            listener = object : NalToMp4Converter.ConversionListener {
-                                override fun onProgress(progress: Int) {
-                                    Log.v(TAG, "onProgress : $fileName  $progress %")
-                                }
+                        val exporter = ExportMovieFile(context)
+                        exporter.exportBinaryFileExternal(fileName, fileName)
 
-                                override fun onConversionComplete(outputUri: Uri?) {
-                                    Log.v(TAG, "onConversionComplete : $fileName")
-                                    callback.onCompletedExport(true, fileName)
-                                }
-
-                                override fun onConversionFailed(e: Exception) {
-                                    Log.v(TAG, "onConversionFailed : $fileName")
-                                    callback.onCompletedExport(false, fileName)
-                                }
-                            }
-                        )
-   */
-                        //fileOperation.exportMovieFile(fileName, callback)
                         callback.onCompletedExport(true, fileName)
                         _executing.value = false
                         _selectedFileName.value = ""

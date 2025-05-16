@@ -208,7 +208,7 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
             AlertDialog(
                 onDismissRequest = { exportSingleFileConfirm = false },
                 title = { Text(text = stringResource(R.string.dialog_title_export_single_confirm)) },
-                text = { Text(text = "${stringResource(R.string.dialog_description_export_single_confirm)} $targetFileName") },
+                text = { Text(text = "${stringResource(R.string.dialog_description_export_single_confirm)} $targetFileName \n  ${stringResource(R.string.dialog_description_export_single_confirm_notice)}") },
                 confirmButton = {
                     Button(
                         onClick = {
