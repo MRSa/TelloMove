@@ -38,7 +38,8 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
 {
     var deleteAllFileConfirm by remember { mutableStateOf(false) }
     var deleteSingleFileConfirm by remember { mutableStateOf(false) }
-    var exportSingleFileConfirm by remember { mutableStateOf(false) }
+    var exportFileRawConfirm by remember { mutableStateOf(false) }
+    var exportMovieFileConfirm by remember { mutableStateOf(false) }
     var finishExportNotify by remember { mutableStateOf(false) }
     var isExporting by remember { mutableStateOf(false) }
     val selectedFileName = listViewModel.selectedFileName.observeAsState()
@@ -132,11 +133,20 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         }
         IconButton(
             enabled = true,
-            onClick = { exportSingleFileConfirm = true }
+            onClick = { exportFileRawConfirm = true }
         ) {
             Icon(
                 painter = painterResource(R.drawable.baseline_save_alt_24),
                 contentDescription = "Export"
+            )
+        }
+        IconButton(
+            enabled = true,
+            onClick = { exportMovieFileConfirm = true }
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.outline_movie_24),
+                contentDescription = "Convert MP4"
             )
         }
     }
@@ -200,19 +210,19 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         }
     }
 
-    if (exportSingleFileConfirm)
+    if (exportFileRawConfirm)
     {
         val targetFileName = selectedFileName.value?: ""
         if (targetFileName.isNotEmpty())
         {
             AlertDialog(
-                onDismissRequest = { exportSingleFileConfirm = false },
+                onDismissRequest = { exportFileRawConfirm = false },
                 title = { Text(text = stringResource(R.string.dialog_title_export_single_confirm)) },
                 text = { Text(text = "${stringResource(R.string.dialog_description_export_single_confirm)} $targetFileName \n  ${stringResource(R.string.dialog_description_export_single_confirm_notice)}") },
                 confirmButton = {
                     Button(
                         onClick = {
-                            exportSingleFileConfirm = false
+                            exportFileRawConfirm = false
                             isExporting = true
                             listViewModel.exportMovieFile(context, targetFileName, object: IFileOperationNotify {
                                 override fun onCompletedExport(result: Boolean, fileName: String) {
@@ -226,7 +236,7 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
                     }
                 },
                 dismissButton = {
-                    Button(onClick = { exportSingleFileConfirm = false }) {
+                    Button(onClick = { exportFileRawConfirm = false }) {
                         Text(text = stringResource(R.string.dialog_button_cancel))
                     }
                 }
@@ -234,7 +244,45 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
         }
         else
         {
-            exportSingleFileConfirm = false
+            exportFileRawConfirm = false
+        }
+    }
+
+    if (exportMovieFileConfirm)
+    {
+        val targetFileName = selectedFileName.value?: ""
+        if (targetFileName.isNotEmpty())
+        {
+            AlertDialog(
+                onDismissRequest = { exportMovieFileConfirm = false },
+                title = { Text(text = stringResource(R.string.dialog_title_export_movie_confirm)) },
+                text = { Text(text = "${stringResource(R.string.dialog_description_export_movie_confirm)} $targetFileName \n  ${stringResource(R.string.dialog_description_export_movie_confirm_notice)}") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            exportMovieFileConfirm = false
+                            isExporting = true
+                            listViewModel.exportAsMP4File(context, targetFileName, object: IFileOperationNotify {
+                                override fun onCompletedExport(result: Boolean, fileName: String) {
+                                    isExporting = false
+                                    finishExportNotify = true
+                                }
+                            })
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.dialog_button_ok))
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { exportMovieFileConfirm = false }) {
+                        Text(text = stringResource(R.string.dialog_button_cancel))
+                    }
+                }
+            )
+        }
+        else
+        {
+            exportMovieFileConfirm = false
         }
     }
 

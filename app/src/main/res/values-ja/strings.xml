@@ -37,6 +37,10 @@
     <string name="dialog_description_export_single_confirm">次のファイルをエクスポートします。 : </string>
     <string name="dialog_description_export_single_confirm_notice">(エクスポート後、ffmpeg等でMP4形式などに変換する必要があります。)</string>
 
+    <string name="dialog_title_export_movie_confirm">MP4ファイルエクスポート</string>
+    <string name="dialog_description_export_movie_confirm">次のファイルをMP4形式に変換してエクスポートします。 : </string>
+    <string name="dialog_description_export_movie_confirm_notice"> </string>
+
     <string name="pref_show_wifi_settings">Wi-Fi設定</string>
     <string name="pref_show_wifi_settings_detail">Wi-Fi設定画面を開きます。</string>
 

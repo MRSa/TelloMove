@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import jp.osdn.gokigen.tellomove.file.ExportMovieFile
 import jp.osdn.gokigen.tellomove.file.IFileOperationNotify
 import jp.osdn.gokigen.tellomove.file.LocalFileOperation
+import jp.osdn.gokigen.tellomove.file.NALToMP4Converter2
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -84,6 +85,32 @@ class FileListViewModel: ViewModel()
             catch (e: Exception)
             {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    fun exportAsMP4File(context: Context, fileName: String, callback: IFileOperationNotify)
+    {
+        CoroutineScope(Dispatchers.Main).launch {
+            try
+            {
+                if (::fileOperation.isInitialized) {
+                    _executing.value = true
+
+                    val outputFileName = fileName.replace(".mov","")
+                    val converter = NALToMP4Converter2(context)
+                    converter.convertNALToMp4(fileName, outputFileName)
+
+                    callback.onCompletedExport(true, fileName)
+                    _executing.value = false
+                    _selectedFileName.value = ""
+                }
+            }
+            catch (t: Throwable)
+            {
+                t.printStackTrace()
+                _executing.value = false
+                callback.onCompletedExport(false, fileName)
             }
         }
     }
