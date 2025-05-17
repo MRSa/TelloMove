@@ -1,6 +1,7 @@
 package jp.osdn.gokigen.tellomove.ui.view
 
 import android.util.Log
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -288,12 +290,20 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
 
     if (isExporting)
     {
+        val imageBitmap = listViewModel.exportImageBitmap.observeAsState()
         val message = stringResource(R.string.dialog_progress_exporting)
         AlertDialog(
             onDismissRequest = { },
             title = { Text(message) },
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    if (imageBitmap.value != null)
+                    {
+                        Image(
+                            bitmap = imageBitmap.value!!.asImageBitmap(),
+                            contentDescription = "Extract View"
+                        )
+                    }
                     CircularProgressIndicator()
                 }
             },

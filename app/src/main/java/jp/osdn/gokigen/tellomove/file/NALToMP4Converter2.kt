@@ -1,6 +1,5 @@
 package jp.osdn.gokigen.tellomove.file
 
-
 import android.content.ContentValues
 import android.content.Context
 import android.media.*
@@ -10,6 +9,7 @@ import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
+import jp.osdn.gokigen.tellomove.communication.IBitmapReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -20,30 +20,16 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.TimeUnit
 
-// 定数
-private const val TAG = "NALToMP4Converter2"
-private const val VIDEO_WIDTH = 960 // 出力ビデオの幅
-private const val VIDEO_HEIGHT = 720 // 出力ビデオの高さ
-//private const val VIDEO_BITRATE = 5_000_000 // 2 Mbps (出力ビデオのビットレート)
-//private const val VIDEO_BITRATE = 2_000_000 // 2 Mbps (出力ビデオのビットレート)
-private const val VIDEO_BITRATE = 1_000_000 // 1 Mbps (出力ビデオのビットレート)
-//private const val VIDEO_FRAME_RATE = 30 // 出力ビデオのフレームレート
-private const val VIDEO_FRAME_RATE = 15 // 出力ビデオのフレームレート
-private const val VIDEO_I_FRAME_INTERVAL = 1 // 秒 (キーフレーム間隔)
 
 class NALToMP4Converter2(private val context: Context)
 {
-
     private var decoder: MediaCodec? = null
     private var encoder: MediaCodec? = null
     private var muxer: MediaMuxer? = null
     private var videoTrackIndex = -1
     private var isMuxerStarted = false
 
-    // デコーダとエンコーダ間でデータを渡すためのキュー
-    // デコードされた生のYUVフレームを格納
     private val decodedFramesQueue: BlockingQueue<ByteBuffer> = ArrayBlockingQueue(10)
-    // 各フレームのプレゼンテーションタイムスタンプ (マイクロ秒単位) を格納
     private val frameTimestampsQueue: BlockingQueue<Long> = ArrayBlockingQueue(10)
 
     /**
@@ -51,48 +37,52 @@ class NALToMP4Converter2(private val context: Context)
      *
      * @return 変換されたMP4ファイルのUri、または変換失敗の場合はnull
      */
-    suspend fun convertNALToMp4(input_file_name: String, output_file_name: String, outputDir :String = "TelloMove"): Uri? = withContext(Dispatchers.IO)
+    suspend fun convertNALToMp4(inputFileName: String, outputFileName: String, outputDir :String = "TelloMove", bitmapNotify: IBitmapReceiver? = null): Uri? = withContext(Dispatchers.IO)
     {
         var outputFileUri: Uri? = null
         var outputPfd: ParcelFileDescriptor? = null
         var fileInputStream: FileInputStream? = null
 
-        try {
+        try
+        {
             // 1. MediaStoreを介して出力MP4ファイルを作成
             val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, output_file_name)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, outputFileName)
                 put(MediaStore.MediaColumns.MIME_TYPE, "video/mp4")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     put(MediaStore.Video.Media.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$outputDir/")
                     put(MediaStore.Video.Media.IS_PENDING, true)
                 }
             }
-
             outputFileUri = context.contentResolver.insert(
                 MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
                 contentValues
             )
-            if (outputFileUri == null) {
+            if (outputFileUri == null)
+            {
                 throw IOException("新しい MediaStore ファイルの作成に失敗しました。")
             }
 
             outputPfd = context.contentResolver.openFileDescriptor(outputFileUri, "w")
-            if (outputPfd == null) {
+            if (outputPfd == null)
+            {
                 throw IOException("出力ファイルの ParcelFileDescriptor のオープンに失敗しました。")
             }
 
-            // 2. MediaMuxerを出力ファイルディスクリプタで初期化
-            // MediaMuxerは、エンコードされたデータをMP4コンテナに格納するために使用されます。
-            muxer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            muxer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            {
                 //MediaMuxer(pfd.fileDescriptor, MediaMuxer.OutputFormat.MPEG_4)
                 MediaMuxer(outputPfd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-            } else {
+            }
+            else
+            {
                 // API 26未満では、MediaMuxer.OutputFormatはint型
                 // MediaMuxer(pfd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG4)
-                MediaMuxer("${Environment.DIRECTORY_MOVIES}/$outputDir/$output_file_name", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+                MediaMuxer("${Environment.DIRECTORY_MOVIES}/$outputDir/$outputFileName", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             }
-            outputPfd.close() // MediaMuxerに渡した後、ParcelFileDescriptorをクローズする
+            //outputPfd.close() // MediaMuxerに渡した後、ParcelFileDescriptorをクローズする
             // muxer = MediaMuxer(outputPfd.fileDescriptor, MediaMuxer.OutputFormat.MPEG_4)
+
 
             // 3. MediaCodec デコーダを初期化 (入力NALユニット用)
             // NALファイルのビデオコーデックタイプ (例: H.264/AVC) を決定します。
@@ -109,11 +99,7 @@ class NALToMP4Converter2(private val context: Context)
                 setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
                 setInteger(MediaFormat.KEY_BIT_RATE, VIDEO_BITRATE)
                 setInteger(MediaFormat.KEY_FRAME_RATE, VIDEO_FRAME_RATE)
-                setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VIDEO_I_FRAME_INTERVAL) // キーフレーム間隔
-
-                // プロファイルとレベルを設定することも可能:
-                // setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileHigh);
-                // setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel31);
+                setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VIDEO_I_FRAME_INTERVAL)
             }
             encoder = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
             encoder?.configure(outputFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
@@ -121,22 +107,25 @@ class NALToMP4Converter2(private val context: Context)
 
             // 5. 処理を開始: NAL読み込み -> デコード -> エンコード -> 多重化
             val baseDir = context.getExternalFilesDir(null)
-            val filePath = "${baseDir?.absolutePath}/$outputDir/$input_file_name"
+            val filePath = "${baseDir?.absolutePath}/$outputDir/$inputFileName"
             fileInputStream = FileInputStream(File(filePath))
+
             // NAL読み込み用の十分な大きさのバッファ
-            val inputBuffer = ByteArray(1024 * 1024)
+            val inputBuffer = ByteArray(BUFFER_SIZE)
             var bytesRead: Int
             var presentationTimeUs: Long = 0
 
             // デコーダ入力スレッド
             val decoderInputThread = Thread {
                 var bufferOffset = 0
-                try {
+                try
+                {
                     // ファイルからデータを読み込み、NALユニットをデコーダに投入
                     while (fileInputStream.read(inputBuffer, bufferOffset, inputBuffer.size - bufferOffset).also { bytesRead = it } != -1 || bufferOffset > 0) {
                         val totalBytes = bufferOffset + bytesRead
                         var nalStart = 0
-                        while (nalStart < totalBytes) {
+                        while (nalStart < totalBytes)
+                        {
                             // 次のNALユニットの開始位置を見つける
                             val nalEnd = findNextNalStart(inputBuffer, nalStart, totalBytes)
                             if (nalEnd == -1) { // このバッファにこれ以上NALがない場合、残りを保存
@@ -144,38 +133,46 @@ class NALToMP4Converter2(private val context: Context)
                                 bufferOffset = totalBytes - nalStart
                                 break
                             }
-
                             val nalUnitSize = nalEnd - nalStart
+
                             // NALユニットを新しいByteBufferにコピー
                             val nalUnit = ByteBuffer.allocateDirect(nalUnitSize)
                             nalUnit.put(inputBuffer, nalStart, nalUnitSize)
                             nalUnit.flip()
 
                             // デコーダにNALユニットを投入
-                            val inBufferId = decoder?.dequeueInputBuffer(10000) ?: -1 // 10ms タイムアウト
-                            if (inBufferId >= 0) {
+                            val inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1 // 10ms タイムアウト
+                            if (inBufferId >= 0)
+                            {
                                 val buffer = decoder?.getInputBuffer(inBufferId)
                                 buffer?.clear()
                                 buffer?.put(nalUnit)
                                 // NALにタイムスタンプ情報がないため、フレームレートに基づいて推測値を付与
                                 decoder?.queueInputBuffer(inBufferId, 0, nalUnit.limit(), presentationTimeUs, 0)
-                                presentationTimeUs += (1_000_000 / VIDEO_FRAME_RATE).toLong() // マイクロ秒単位
-                            } else {
+                                presentationTimeUs += (VIDEO_BITRATE / VIDEO_FRAME_RATE).toLong()
+                            }
+                            else
+                            {
                                 // デコーダの入力バッファが利用できない場合、少し待つ
-                                Thread.sleep(10)
+                                Thread.sleep(WAIT_MS)
                             }
                             nalStart = nalEnd
                         }
-                        if (nalStart == totalBytes) { // 現在のバッファからすべてのNALを処理済み
+                        if (nalStart == totalBytes)
+                        {
+                            // 現在のバッファからすべてのNALを処理済み
                             bufferOffset = 0
                         }
                     }
                     // ストリームの終端をデコーダに通知
-                    val inBufferId = decoder?.dequeueInputBuffer(10000) ?: -1
-                    if (inBufferId >= 0) {
+                    val inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1
+                    if (inBufferId >= 0)
+                    {
                         decoder?.queueInputBuffer(inBufferId, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                     }
-                } catch (e: Exception) {
+                }
+                catch (e: Exception)
+                {
                     Log.e(TAG, "デコーダ入力スレッドのエラー", e)
                 }
             }
@@ -184,9 +181,11 @@ class NALToMP4Converter2(private val context: Context)
             val decoderOutputThread = Thread {
                 val bufferInfo = MediaCodec.BufferInfo()
                 var decoderOutputDone = false
-                while (!decoderOutputDone) {
-                    val outBufferId = decoder?.dequeueOutputBuffer(bufferInfo, 10000) ?: -1
-                    when (outBufferId) {
+                while (!decoderOutputDone)
+                {
+                    val outBufferId = decoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
+                    when (outBufferId)
+                    {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             // デコーダの出力フォーマットが変更された場合 (稀だが考慮)
                             Log.i(TAG, "デコーダの出力フォーマットが変更されました: ${decoder?.outputFormat}")
@@ -228,7 +227,7 @@ class NALToMP4Converter2(private val context: Context)
 
                 while (!encoderOutputDone) {
                     // エンコーダからエンコード済みデータを取得し、Muxerに書き込む
-                    val outBufferId = encoder?.dequeueOutputBuffer(bufferInfo, 10000) ?: -1
+                    val outBufferId = encoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
                     when (outBufferId) {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             // エンコーダの出力フォーマットが変更された場合
@@ -271,14 +270,14 @@ class NALToMP4Converter2(private val context: Context)
 
                     if (decodedFrame != null && frameTimestamp != null) {
                         if (frameTimestamp == -1L) { // EOFセンチネルの場合
-                            val inBufferId = encoder?.dequeueInputBuffer(10000) ?: -1
+                            val inBufferId = encoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1
                             if (inBufferId >= 0) {
                                 // エンコーダにストリームの終端を通知
                                 encoder?.queueInputBuffer(inBufferId, 0, 0, lastFrameTimestamp, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             }
                             break
                         }
-                        val inBufferId = encoder?.dequeueInputBuffer(10000) ?: -1
+                        val inBufferId = encoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1
                         if (inBufferId >= 0) {
                             val inputBuffer0 = encoder?.getInputBuffer(inBufferId)
                             inputBuffer0?.clear()
@@ -289,7 +288,7 @@ class NALToMP4Converter2(private val context: Context)
                             Log.v(TAG,"WAIT...")
                             decodedFramesQueue.put(decodedFrame)
                             frameTimestampsQueue.put(frameTimestamp)
-                            Thread.sleep(10)
+                            Thread.sleep(WAIT_MS)
                         }
                     }
                 }
@@ -309,7 +308,7 @@ class NALToMP4Converter2(private val context: Context)
             return@withContext outputFileUri
 
         } catch (e: Exception) {
-            Log.e(TAG, "NALからMP4への変換に失敗しました。", e)
+            e.printStackTrace()
             outputFileUri?.let { uri ->
                 // エラー発生時に部分的に作成されたファイルを削除
                 context.contentResolver.delete(uri, null, null)
@@ -332,11 +331,15 @@ class NALToMP4Converter2(private val context: Context)
             decoder?.release()
             encoder?.stop()
             encoder?.release()
-            if (muxer != null && isMuxerStarted) {
-                try {
+            if (muxer != null && isMuxerStarted)
+            {
+                try
+                {
                     muxer?.stop() // Muxerを停止
-                } catch (e: Exception) {
-                    Log.e(TAG, "Muxerの停止エラー (既に停止しているか、無効な状態の可能性があります)", e)
+                }
+                catch (e: Exception)
+                {
+                    e.printStackTrace()
                 }
             }
             muxer?.release()
@@ -367,5 +370,18 @@ class NALToMP4Converter2(private val context: Context)
             }
         }
         return -1
+    }
+
+    companion object
+    {
+        private val TAG = NALToMP4Converter2::class.java.simpleName
+        private const val BUFFER_SIZE = 1024 * 1024 + 16
+        private const val VIDEO_WIDTH = 960
+        private const val VIDEO_HEIGHT = 720
+        private const val VIDEO_FRAME_RATE = 15
+        private const val TIMEOUT_US = 10000L
+        private const val WAIT_MS = 10L
+        private const val VIDEO_BITRATE = 1_000_000
+        private const val VIDEO_I_FRAME_INTERVAL = 1
     }
 }

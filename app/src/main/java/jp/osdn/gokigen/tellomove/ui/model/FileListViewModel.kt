@@ -1,11 +1,16 @@
 package jp.osdn.gokigen.tellomove.ui.model
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import jp.osdn.gokigen.tellomove.R
+import jp.osdn.gokigen.tellomove.communication.IBitmapReceiver
 import jp.osdn.gokigen.tellomove.file.ExportMovieFile
 import jp.osdn.gokigen.tellomove.file.IFileOperationNotify
 import jp.osdn.gokigen.tellomove.file.LocalFileOperation
@@ -26,6 +31,9 @@ class FileListViewModel: ViewModel()
 
     private val _executing : MutableLiveData<Boolean> by lazy { MutableLiveData<Boolean>() }
     val processExecuting: LiveData<Boolean> = _executing
+
+    private val _exportImageBitmap : MutableLiveData<Bitmap> by lazy { MutableLiveData<Bitmap>() }
+    val exportImageBitmap: LiveData<Bitmap> = _exportImageBitmap
 
     fun initializeViewModel(activity: AppCompatActivity)
     {
@@ -95,14 +103,33 @@ class FileListViewModel: ViewModel()
             try
             {
                 if (::fileOperation.isInitialized) {
+                    val bitmap = ContextCompat.getDrawable(context, R.drawable.tello1)?.toBitmap()
+                    if (bitmap != null)
+                    {
+                        _exportImageBitmap.value = bitmap
+                    }
                     _executing.value = true
 
                     val outputFileName = fileName.replace(".mov","")
                     val converter = NALToMP4Converter2(context)
-                    converter.convertNALToMp4(fileName, outputFileName)
+                    converter.convertNALToMp4(inputFileName = fileName, outputFileName = outputFileName, bitmapNotify = object : IBitmapReceiver {
+                        override fun updateBitmapImage(bitmap: Bitmap) {
+                            CoroutineScope(Dispatchers.Main).launch {
+                                try
+                                {
+                                    _exportImageBitmap.value = bitmap
+                                }
+                                catch (t: Throwable)
+                                {
+                                    t.printStackTrace()
+                                }
+                            }
+                        }
+                    })
 
                     callback.onCompletedExport(true, fileName)
                     _executing.value = false
+                    _exportImageBitmap.value = null
                     _selectedFileName.value = ""
                 }
             }
