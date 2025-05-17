@@ -2,6 +2,7 @@ package jp.osdn.gokigen.tellomove.file
 
 import android.content.ContentValues
 import android.content.Context
+import android.graphics.Bitmap
 import android.media.*
 import android.net.Uri
 import android.os.Build
@@ -9,6 +10,7 @@ import android.os.Environment
 import android.os.ParcelFileDescriptor
 import android.provider.MediaStore
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import jp.osdn.gokigen.tellomove.communication.IBitmapReceiver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -228,6 +230,29 @@ class NALToMP4Converter2(private val context: Context)
                 while (!encoderOutputDone) {
                     // エンコーダからエンコード済みデータを取得し、Muxerに書き込む
                     val outBufferId = encoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
+////////////////////////////////////////////////////////////////////////////////
+/*
+                                            if (outBufferId >= 0)
+                                            {
+                                                // デコードされたデータをビットマップ化
+                                                Log.v(TAG, "outBufferId: $outBufferId, size: ${bufferInfo.size}")
+                                                try
+                                                {
+                                                    val yuvBytes = ByteArray(VIDEO_WIDTH * VIDEO_HEIGHT * 3 / 2)
+                                                    val outputBuffer = decoder?.getOutputBuffer(outBufferId)
+                                                    outputBuffer?.position(bufferInfo.offset)
+                                                    outputBuffer?.limit(bufferInfo.offset + bufferInfo.size)
+                                                    outputBuffer?.get(yuvBytes)
+                                                    val bitmap = yuv420ToBitmap(yuvBytes)
+                                                    bitmapNotify?.updateBitmapImage(bitmap)
+                                                }
+                                                catch (ee: Exception)
+                                                {
+                                                    ee.printStackTrace()
+                                                }
+                                            }
+*/
+////////////////////////////////////////////////////////////////////////////////////
                     when (outBufferId) {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             // エンコーダの出力フォーマットが変更された場合
@@ -370,6 +395,35 @@ class NALToMP4Converter2(private val context: Context)
             }
         }
         return -1
+    }
+
+    private fun yuv420ToBitmap(yuvBytes: ByteArray, width: Int = VIDEO_WIDTH, height: Int = VIDEO_HEIGHT): Bitmap
+    {
+        val out = IntArray(width * height)
+        val uIndex = width * height
+        val vIndex = width * height * 5 / 4
+        var yIndex = 0
+        var i = 0
+        for (y in 0 until height) {
+            for (x in 0 until width) {
+                val yValue = (yuvBytes[yIndex++].toInt() and 0xff) - 16
+                val uValue = (yuvBytes[uIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
+                val vValue = (yuvBytes[vIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
+
+                var r = (1.164 * yValue + 1.596 * vValue).toInt()
+                var g = (1.164 * yValue - 0.391 * uValue - 0.813 * vValue).toInt()
+                var b = (1.164 * yValue + 2.018 * uValue).toInt()
+
+                r = r.coerceIn(0, 255)
+                g = g.coerceIn(0, 255)
+                b = b.coerceIn(0, 255)
+
+                out[i++] = 0xff000000.toInt() or (r shl 16) or (g shl 8) or b
+            }
+        }
+        val bitmap = createBitmap(width, height)
+        bitmap.setPixels(out, 0, width, 0, 0, width, height)
+        return bitmap
     }
 
     companion object
