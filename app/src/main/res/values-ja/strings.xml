@@ -15,6 +15,32 @@
     <string name="label_rotation_degree">回転角: </string>
     <string name="label_speed">速度(cm/s): </string>
 
+    <string name="file_list">録画ファイル一覧</string>
+    <string name="file_empty">ファイル無し</string>
+
+    <string name="dialog_progress_executing">実行中…</string>
+    <string name="dialog_progress_exporting">エクスポート実行中… しばらくお待ちください…</string>
+
+    <string name="dialog_title_finish_export">エクスポート完了</string>
+    <string name="dialog_message_finish_export">エクスポートが完了しました。</string>
+
+    <string name="dialog_button_ok">OK</string>
+    <string name="dialog_button_cancel">Cancel</string>
+
+    <string name="dialog_title_delete_all_confirm">全ファイル削除</string>
+    <string name="dialog_description_delete_all_confirm">すべてのファイルを削除します。よろしいですか？</string>
+
+    <string name="dialog_title_delete_single_confirm">ファイル削除</string>
+    <string name="dialog_description_delete_single_confirm">次のファイルを削除します。 : </string>
+
+    <string name="dialog_title_export_single_confirm">ファイルエクスポート</string>
+    <string name="dialog_description_export_single_confirm">次のファイルをエクスポートします。 : </string>
+    <string name="dialog_description_export_single_confirm_notice">(エクスポート後、ffmpeg等でMP4形式などに変換する必要があります。)</string>
+
+    <string name="dialog_title_export_movie_confirm">MP4ファイルエクスポート</string>
+    <string name="dialog_description_export_movie_confirm">次のファイルをMP4形式に変換してエクスポートします。 : </string>
+    <string name="dialog_description_export_movie_confirm_notice"> </string>
+
     <string name="pref_show_wifi_settings">Wi-Fi設定</string>
     <string name="pref_show_wifi_settings_detail">Wi-Fi設定画面を開きます。</string>
 
@@ -27,6 +53,9 @@
     <string name="label_speaker_mode">コマンド発声</string>
     <string name="pref_speak_command">コマンドを発声</string>
     <string name="pref_detail_speak_command">Telloにコマンドを送信せず、発声します。</string>
+
+    <string name="pref_recorded_file_list">録画ファイル一覧</string>
+    <string name="pref_detail_recorded_file_list">録画したファイルの一覧を表示します。</string>
 
     <string name="pref_instruction_manual">操作説明</string>
     <string name="pref_instruction_manual_url">https://github.com/MRSa/TelloMove/blob/master/docs/README.md</string>

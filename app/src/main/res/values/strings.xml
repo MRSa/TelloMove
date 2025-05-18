@@ -15,6 +15,32 @@
     <string name="label_rotation_degree">Rotation Degree: </string>
     <string name="label_speed">Speed(cm/s): </string>
 
+    <string name="file_list">File List</string>
+    <string name="file_empty">No file.</string>
+
+    <string name="dialog_progress_executing">Executing…</string>
+    <string name="dialog_progress_exporting">Exporting… please Wait…</string>
+
+    <string name="dialog_title_finish_export">Finished Export</string>
+    <string name="dialog_message_finish_export">Export is completed.</string>
+
+    <string name="dialog_button_ok">OK</string>
+    <string name="dialog_button_cancel">Cancel</string>
+
+    <string name="dialog_title_delete_all_confirm">Delete All files</string>
+    <string name="dialog_description_delete_all_confirm">Delete All files, OK?</string>
+
+    <string name="dialog_title_delete_single_confirm">Delete file</string>
+    <string name="dialog_description_delete_single_confirm">Delete file: </string>
+
+    <string name="dialog_title_export_single_confirm">Export file</string>
+    <string name="dialog_description_export_single_confirm">Export file. 　: </string>
+    <string name="dialog_description_export_single_confirm_notice">* Conversion to MP4 (with ffmpeg etc.) needed after export.</string>
+
+    <string name="dialog_title_export_movie_confirm">Export MP4 file</string>
+    <string name="dialog_description_export_movie_confirm">Export file as MP4 : </string>
+    <string name="dialog_description_export_movie_confirm_notice"> </string>
+
     <string name="pref_show_wifi_settings">Wi-Fi Settings</string>
     <string name="pref_show_wifi_settings_detail">Show Wi-Fi Settings Screen</string>
 
@@ -26,8 +52,10 @@
 
     <string name="label_speaker_mode">Speak Command</string>
     <string name="pref_speak_command">Speak Commands</string>
-    <string name="pref_detail_speak_command">Speak command words instead of sending to tello command.</string>
+    <string name="pref_detail_speak_command">Speak command words instead of sending commands to Tello.</string>
 
+    <string name="pref_recorded_file_list">List recorded video files</string>
+    <string name="pref_detail_recorded_file_list">View recorded files.</string>
 
     <string name="pref_instruction_manual">Instruction</string>
     <string name="pref_instruction_manual_url">https://github.com/MRSa/TelloMove/blob/master/docs/README.md</string>

@@ -160,7 +160,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
                 enabled = (isConnected.value == true)||(speakCommands.value == true),
                 onClick = {
                     val command = if (isVideoOn.value == true) {
-                        if (isVideoRecording.value != true)
+                        if (isVideoRecording.value == true)
                         {
                             // ----- ビデオ録画中の時は録画を止める
                             viewModel.setVideoRecordingMode(false)
@@ -183,7 +183,7 @@ fun ControlPadPanel(viewModel: MainViewModel)
                 )
             }
             IconButton(
-                enabled = (isConnected.value == true)||(speakCommands.value == true),
+                enabled = ((isConnected.value == true)&&(isVideoOn.value == true))||(speakCommands.value == true),
                 onClick = {
                     val isRecording = (isVideoRecording.value != true) // Tr: START / Fa: STOP
                     if ((isConnected.value == true)&&(isVideoOn.value == true))

@@ -115,6 +115,8 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUp
             AppSingleton.watchdog.setReportBatteryStatus(this)
             AppSingleton.receiver.setStatusUpdateReport(this)
             AppSingleton.streamReceiver.setBitmapReceiver(this)
+
+            AppSingleton.streamReceiver.prepareFileOutputDirectory(activity)
         }
         catch (e: Exception)
         {
@@ -292,8 +294,15 @@ class MainViewModel: ViewModel(), IConnectionStatusUpdate, ISpeakCommandStatusUp
     {
         try
         {
-            CoroutineScope(Dispatchers.Main).launch {
-                isVideoRecording.value = isRecording
+            // ----- 録画状態の変更
+            val currentRecording = isVideoRecording.value ?: false
+            if (isRecording != currentRecording)
+            {
+                // ----- 録画を開始する(True) / 録画を停止する(False)
+                CoroutineScope(Dispatchers.Main).launch {
+                    AppSingleton.streamReceiver.changeRecordingStreamStatus(isRecording)
+                    isVideoRecording.value = isRecording
+                }
             }
         }
         catch (e: Exception)

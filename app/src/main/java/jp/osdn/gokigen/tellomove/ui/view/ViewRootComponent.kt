@@ -11,6 +11,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import jp.osdn.gokigen.tellomove.ui.model.FileListViewModel
 import jp.osdn.gokigen.tellomove.ui.model.MainViewModel
 import jp.osdn.gokigen.tellomove.ui.model.PreferenceViewModel
 import jp.osdn.gokigen.tellomove.ui.theme.TelloMoveTheme
@@ -19,14 +20,17 @@ class ViewRootComponent @JvmOverloads constructor(context: Context, attrs: Attri
 {
     private lateinit var myViewModel : MainViewModel
     private lateinit var myPreferenceViewModel : PreferenceViewModel
+    private lateinit var myListViewModel : FileListViewModel
 
     fun prepare(
         viewModel: MainViewModel,
-        prefsModel: PreferenceViewModel
+        prefsModel: PreferenceViewModel,
+        listViewModel: FileListViewModel
     )
     {
         myViewModel = viewModel
         myPreferenceViewModel = prefsModel
+        myListViewModel = listViewModel
         Log.v(TAG, " ...prepare...")
     }
 
@@ -36,7 +40,7 @@ class ViewRootComponent @JvmOverloads constructor(context: Context, attrs: Attri
         val navController = rememberNavController()
 
         TelloMoveTheme {
-            NavigationMain(navController, myViewModel, myPreferenceViewModel)
+            NavigationMain(navController, myViewModel, myPreferenceViewModel, myListViewModel)
         }
         Log.v(TAG, " ...NavigationRootComponent...")
     }
@@ -50,7 +54,8 @@ class ViewRootComponent @JvmOverloads constructor(context: Context, attrs: Attri
 @Composable
 fun NavigationMain(navController: NavHostController,
                    mainViewModel: MainViewModel,
-                   preferenceViewModel: PreferenceViewModel
+                   preferenceViewModel: PreferenceViewModel,
+                   listViewModel: FileListViewModel
 )
 {
     TelloMoveTheme {
@@ -61,6 +66,7 @@ fun NavigationMain(navController: NavHostController,
         ) {
             composable("MainScreen") { MainScreen(navController = navController, viewModel = mainViewModel) }
             composable("PreferenceScreen") { PreferenceScreen(navController = navController, prefsModel = preferenceViewModel) }
+            composable("RecordedFileListScreen") { RecordedFileListScreen(navController = navController, listViewModel = listViewModel) }
         }
     }
 }

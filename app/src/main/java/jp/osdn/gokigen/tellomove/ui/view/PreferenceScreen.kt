@@ -61,6 +61,9 @@ fun PreferenceScreen(navController: NavHostController, prefsModel: PreferenceVie
             SwitchSetSpeakCommand(prefsModel)
             Spacer(Modifier.size(padding))
             HorizontalDivider(thickness = 1.dp)
+            OpenRecordedFileList(navController)
+            Spacer(Modifier.size(padding))
+            HorizontalDivider(thickness = 1.dp)
             ShowAboutGokigen()
             Spacer(Modifier.size(padding))
             HorizontalDivider(thickness = 1.dp)
@@ -191,6 +194,30 @@ fun SwitchSetSpeakCommand(prefsModel: PreferenceViewModel)
     Text(text = stringResource(R.string.pref_detail_speak_command),
         color = MaterialTheme.colorScheme.secondary,
         fontSize = with(density) { 14.dp.toSp() },)
+}
+
+@Composable
+fun OpenRecordedFileList(navController: NavHostController)
+{
+    val density = LocalDensity.current
+    Row(modifier = Modifier.padding(all = 8.dp)) {
+        Spacer(modifier = Modifier.width(8.dp))
+        Column {
+            Text(
+                text = stringResource(R.string.pref_recorded_file_list),
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable(onClick = { navController.navigate("RecordedFileListScreen") }),
+                fontSize = with(density) { 18.dp.toSp() }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.pref_detail_recorded_file_list),
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.clickable(onClick = { navController.navigate("RecordedFileListScreen") }),
+                fontSize = with(density) { 14.dp.toSp() }
+            )
+        }
+    }
 }
 
 @Composable

@@ -1,34 +1,32 @@
 package jp.osdn.gokigen.tellomove.communication
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaCodec
 import android.media.MediaFormat
 import android.util.Log
 import androidx.core.graphics.createBitmap
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.net.DatagramPacket
 import java.net.DatagramSocket
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 
-class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT)
+class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val width: Int = VIDEO_WIDTH, private val height: Int = VIDEO_HEIGHT, private val isDumpLog : Boolean = false)
 {
-    companion object
-    {
-        private val TAG = StreamReceiver::class.java.simpleName
-        private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
-        private const val TIMEOUT_MS = 100L
-        private const val STREAM_PORT = 11111
-        private const val VIDEO_WIDTH = 960
-        private const val VIDEO_HEIGHT = 720
-    }
-
     private val bufferSize = width * height * 3 / 2 // YUV420形式を想定
     private val receiveQueue = ArrayBlockingQueue<ByteArray>(100)
     private val streamBuffer = ByteArrayOutputStream()
     private var running = false
+    private var outputFile = false
+    private var fileOutputStream : FileOutputStream? = null
     private lateinit var decoder: MediaCodec
     private lateinit var bitmapReceiver: IBitmapReceiver
+    private lateinit var outputDirectory: File
 
     fun startReceive()
     {
@@ -45,6 +43,54 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
             running = false
             decoder.stop()
             decoder.release()
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
+        }
+    }
+
+    fun prepareFileOutputDirectory(context: Context, topDir :String = "TelloMove")
+    {
+        val baseDir = context.getExternalFilesDir(null)
+        val dirPath = "${baseDir?.absolutePath}/$topDir"
+        outputDirectory = File(dirPath)
+        outputDirectory.mkdirs()
+    }
+
+    fun changeRecordingStreamStatus(onOff: Boolean)
+    {
+        try {
+            if (!::outputDirectory.isInitialized) {
+                Log.v(
+                    TAG,
+                    "ERROR>changeRecordingStreamStatus : output directory does not initialized..."
+                )
+                return
+            }
+
+            // ---------- True: ビデオ録画の開始 / False ビデオ録画の終了
+            Log.v(TAG, "changeRecordingStreamStatus : $onOff")
+
+            if (onOff) {
+                // ----- 録画開始
+                val targetFile = File(
+                    outputDirectory,
+                    "M" + SimpleDateFormat(
+                        FILENAME_FORMAT,
+                        Locale.US
+                    ).format(System.currentTimeMillis()) + "_" + 0 + ".mov"
+                )
+                fileOutputStream = FileOutputStream(targetFile)
+                outputFile = true
+            }
+            else
+            {
+                outputFile = false
+                fileOutputStream?.flush()
+                fileOutputStream?.close()
+                fileOutputStream = null
+            }
         }
         catch (e: Exception)
         {
@@ -74,6 +120,19 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                 else if (index == 0)
                 {
                     val queuedData = streamBuffer.toByteArray()
+                    if (outputFile)
+                    {
+                        try
+                        {
+                            //val fileOutputData = queuedData.copyOf()
+                            //outputByteArrayToFile(fileOutputData)
+                            outputByteArrayToFile(queuedData)
+                        }
+                        catch (ee: Exception)
+                        {
+                            ee.printStackTrace()
+                        }
+                    }
                     receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     streamBuffer.reset()
                     streamBuffer.write(receivedData, 0, packet.length)
@@ -82,6 +141,19 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                 {
                     streamBuffer.write(receivedData, 0, index - 1)
                     val queuedData = streamBuffer.toByteArray()
+                    if (outputFile)
+                    {
+                        try
+                        {
+                            //val fileOutputData = queuedData.copyOf()
+                            //outputByteArrayToFile(fileOutputData)
+                            outputByteArrayToFile(queuedData)
+                        }
+                        catch (ee: Exception)
+                        {
+                            ee.printStackTrace()
+                        }
+                    }
                     receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     streamBuffer.reset()
                     streamBuffer.write(queuedData, index, (queuedData.size - index))
@@ -96,6 +168,18 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         {
             Log.v(TAG, " FINISH receiveUdpDataThread(port: $port)")
             socket.close()
+        }
+    }
+
+    private fun outputByteArrayToFile(data: ByteArray)
+    {
+        try
+        {
+            fileOutputStream?.write(data)
+        }
+        catch (e: Exception)
+        {
+            e.printStackTrace()
         }
     }
 
@@ -204,6 +288,73 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                                 xex.printStackTrace()
                             }
 
+                            if (isDumpLog)
+                            {
+                                try
+                                {
+                                    val forLog = decoder.outputFormat
+                                    Log.d(TAG, "Output format obtained.")
+
+                                    // 6. 取得した設定値 (出力フォーマット) をログに出力します
+                                    Log.i(TAG, "--- Decoder Configuration (Output Format) ---")
+                                    Log.i(
+                                        TAG,
+                                        "  mime: " + forLog.getString(MediaFormat.KEY_MIME)
+                                    )
+                                    if (forLog.containsKey(MediaFormat.KEY_WIDTH)) {
+                                        Log.i(
+                                            TAG,
+                                            "  width: " + forLog.getInteger(MediaFormat.KEY_WIDTH)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_HEIGHT)) {
+                                        Log.i(
+                                            TAG,
+                                            "  height: " + forLog.getInteger(MediaFormat.KEY_HEIGHT)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_COLOR_FORMAT)) {
+                                        Log.i(
+                                            TAG,
+                                            "  color-format: " + forLog.getInteger(MediaFormat.KEY_COLOR_FORMAT)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_FRAME_RATE)) {
+                                        Log.i(
+                                            TAG,
+                                            "  frame-rate: " + forLog.getFloat(MediaFormat.KEY_FRAME_RATE)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_BIT_RATE)) {
+                                        Log.i(
+                                            TAG,
+                                            "  bit-rate: " + forLog.getFloat(MediaFormat.KEY_BIT_RATE)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_CAPTURE_RATE)) {
+                                        Log.i(
+                                            TAG,
+                                            "  capture-rate: " + forLog.getFloat(MediaFormat.KEY_CAPTURE_RATE)
+                                        )
+                                    }
+                                    if (forLog.containsKey(MediaFormat.KEY_I_FRAME_INTERVAL)) {
+                                        Log.i(
+                                            TAG,
+                                            "  i-frame-interval: " + forLog.getInteger(
+                                                MediaFormat.KEY_I_FRAME_INTERVAL
+                                            )
+                                        )
+                                    }
+                                    // 他にも必要なキーがあれば追加してください
+                                    // MediaFormat.KEY_BIT_RATE, MediaFormat.KEY_SAMPLE_RATE, MediaFormat.KEY_CHANNEL_COUNT など
+                                    Log.i(TAG, "---------------------------------------------")
+                                }
+                                catch (exxx: Exception)
+                                {
+                                    exxx.printStackTrace()
+                                }
+                            }
+
                             val bufferInfo = MediaCodec.BufferInfo()
                             var outputBufferIndex = decoder.dequeueOutputBuffer(bufferInfo, 100)
                             while (outputBufferIndex >= 0)
@@ -294,5 +445,16 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         val bitmap = createBitmap(width, height)
         bitmap.setPixels(out, 0, width, 0, 0, width, height)
         return bitmap
+    }
+
+    companion object
+    {
+        private val TAG = StreamReceiver::class.java.simpleName
+        private const val BUFFER_SIZE = 256 * 1024 + 16  // 受信バッファは 256kB
+        private const val TIMEOUT_MS = 100L
+        private const val STREAM_PORT = 11111
+        private const val VIDEO_WIDTH = 960
+        private const val VIDEO_HEIGHT = 720
+        private const val FILENAME_FORMAT = "yyyyMMdd_HHmmss"
     }
 }
