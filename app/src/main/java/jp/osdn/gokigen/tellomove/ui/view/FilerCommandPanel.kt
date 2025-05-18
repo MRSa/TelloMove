@@ -143,10 +143,11 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
             )
         }
         IconButton(
-            enabled = true,
+            enabled = false,
             onClick = { exportMovieFileConfirm = true }
         ) {
             Icon(
+                modifier = Modifier.alpha(if (false) 1f else 0f),
                 painter = painterResource(R.drawable.outline_movie_24),
                 contentDescription = "Convert MP4"
             )

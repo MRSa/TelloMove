@@ -22,12 +22,11 @@ import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.TimeUnit
 
-
 class NALToMP4Converter2(private val context: Context)
 {
     private var decoder: MediaCodec? = null
     private var encoder: MediaCodec? = null
-    private var muxer: MediaMuxer? = null
+    private lateinit var muxer: MediaMuxer
     private var videoTrackIndex = -1
     private var isMuxerStarted = false
 
@@ -83,8 +82,7 @@ class NALToMP4Converter2(private val context: Context)
                 MediaMuxer("${Environment.DIRECTORY_MOVIES}/$outputDir/$outputFileName", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             }
             //outputPfd.close() // MediaMuxerに渡した後、ParcelFileDescriptorをクローズする
-            // muxer = MediaMuxer(outputPfd.fileDescriptor, MediaMuxer.OutputFormat.MPEG_4)
-
+            //muxer = MediaMuxer(outputPfd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
 
             // 3. MediaCodec デコーダを初期化 (入力NALユニット用)
             // NALファイルのビデオコーデックタイプ (例: H.264/AVC) を決定します。
@@ -113,12 +111,111 @@ class NALToMP4Converter2(private val context: Context)
             fileInputStream = FileInputStream(File(filePath))
 
             // NAL読み込み用の十分な大きさのバッファ
-            val inputBuffer = ByteArray(BUFFER_SIZE)
+            val fileSize = fileInputStream.available()
+            val bufferSize = fileSize // BUFFER_SIZE
+            val inputBuffer = ByteArray(bufferSize)
             var bytesRead: Int
             var presentationTimeUs: Long = 0
 
-            // デコーダ入力スレッド
+            // デコーダ入力スレッド (改善検討版）
             val decoderInputThread = Thread {
+                var nalCount = 0
+                var fileOffset = 0
+                var positionOffset = 0
+                //val fileSize = fileInputStream.available()
+                var checkFinished = false
+                try
+                {
+                    while ((!checkFinished)&&(fileOffset < fileSize))
+                    {
+                        Log.v(TAG, "[decoder dequeue INPUT buffer]")
+                        var readStartPosition = 0
+                        val readLength = fileInputStream.read(inputBuffer, positionOffset, (bufferSize - positionOffset))
+                        if (readLength < 0)
+                        {
+                            Log.v(TAG, "READ FAILURE...")
+                            break
+                        }
+                        positionOffset = 0
+                        while ((!checkFinished)&&(readStartPosition >= 0)&&(readStartPosition < readLength))
+                        {
+                            val nalStartPosition = findNextNalStart(inputBuffer, readStartPosition, readLength)
+                            val nalNextPosition = if (nalStartPosition >= 0) {
+                                findNextNalStart(inputBuffer, (nalStartPosition + 3), readLength)
+                            } else {
+                                -1
+                            }
+                            // Log.v(TAG, "::::::::::  nalStartPosition :$nalStartPosition  nalNextPosition :$nalNextPosition  readStartPosition:$readStartPosition  fileSize: $fileSize  read: $readLength ($fileOffset)")
+                            if (nalNextPosition > 0)
+                            {
+                                val dataSize = (nalNextPosition - nalStartPosition)
+                                val nalUnit = ByteBuffer.allocateDirect(dataSize)
+                                nalUnit.put(inputBuffer, nalStartPosition, dataSize)
+                                nalUnit.flip()
+
+                                // デコーダにNALユニットを入れる
+                                var  inBufferId : Int
+                                do {
+                                    inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: MediaCodec.INFO_TRY_AGAIN_LATER
+                                    Thread.sleep(WAIT_MS)
+                                } while (inBufferId == MediaCodec.INFO_TRY_AGAIN_LATER)
+
+                                nalCount++
+                                //Log.v(TAG, "PUT into the decoder input buffer (id: $inBufferId)")
+                                val buffer = decoder?.getInputBuffer(inBufferId)
+                                buffer?.clear()
+                                buffer?.put(nalUnit)
+                                decoder?.queueInputBuffer(inBufferId, 0, nalUnit.limit(), presentationTimeUs, 0)
+                                presentationTimeUs += (VIDEO_BITRATE / VIDEO_FRAME_RATE).toLong()
+                            }
+                            else
+                            {
+                                // ---------- 残りバイト数
+                                val remainPercent = (fileOffset.toFloat() / fileSize.toFloat() * 100.0f).toInt()
+                                //positionOffset = readLength - readStartPosition
+                                Log.v(TAG, "DATA REMAIN BYTES : read:$readLength  pos:$nalStartPosition, rest position:$positionOffset (${readLength - readStartPosition} bytes.) READ: $remainPercent % SIZE: $fileSize ")
+                                // ----- 読み込みデータの先頭に残りデータを詰めておく -----
+                                //System.arraycopy(inputBuffer, nalStartPosition,  inputBuffer, 0, positionOffset)
+
+                                //  とりあえず break
+                                checkFinished = true
+                            }
+                            // ---- 読み込みポジションをすすめる。
+                            readStartPosition = nalNextPosition + 3
+                        }
+                        fileOffset += readLength
+                    }
+                }
+                catch (e: Exception)
+                {
+                    e.printStackTrace()
+                }
+                finally
+                {
+                    try
+                    {
+                        // ストリームの終端をデコーダに通知
+                        Log.v(TAG, "Write Termination... (nalCount: $nalCount)")
+                        var inBufferId : Int
+                        do {
+                            inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: MediaCodec.INFO_TRY_AGAIN_LATER
+                        } while (inBufferId == MediaCodec.INFO_TRY_AGAIN_LATER)
+                        if (inBufferId >= 0)
+                        {
+                            decoder?.queueInputBuffer(inBufferId, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                        }
+                        Log.v(TAG, " DONE...decoder queue finished...")
+                    }
+                    catch (ex: Exception)
+                    {
+                        ex.printStackTrace()
+                    }
+                    Log.v(TAG, " ====== STREAM DATA READ FINISHED : $fileSize bytes.")
+                }
+            }
+
+            // デコーダ入力スレッド
+            val decoderInputThreadOriginal = Thread {
                 var bufferOffset = 0
                 try
                 {
@@ -182,20 +279,63 @@ class NALToMP4Converter2(private val context: Context)
             // デコーダ出力 & エンコーダ入力スレッド
             val decoderOutputThread = Thread {
                 val bufferInfo = MediaCodec.BufferInfo()
+                var decodeCount = 0
                 var decoderOutputDone = false
                 while (!decoderOutputDone)
                 {
-                    val outBufferId = decoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
+                    Log.v(TAG, "[decoder dequeue output buffer]")
+                    var outBufferId = MediaCodec.INFO_TRY_AGAIN_LATER
+                    while (outBufferId == MediaCodec.INFO_TRY_AGAIN_LATER)
+                    {
+                        try
+                        {
+                            outBufferId = decoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: MediaCodec.INFO_TRY_AGAIN_LATER
+                            Thread.sleep(WAIT_MS)
+                        }
+                        catch (e: Exception)
+                        {
+                            e.printStackTrace()
+                            //try
+                            //{
+                                //val inputFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, VIDEO_WIDTH, VIDEO_HEIGHT)
+                                //decoder = MediaCodec.createDecoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
+                                //decoder?.configure(inputFormat, null, null, 0)
+                                //decoder?.start()
+                                //Thread.sleep(WAIT_MS)
+                                //Log.v(TAG, "DECODER RESTARTED")
+                            //}
+                            //catch (ex: Exception)
+                            //{
+                            //    ex.printStackTrace()
+                            //}
+                        }
+                    }
+                    Log.v(TAG, "DECODER dequeue output buffer: outBufferId: $outBufferId")
                     when (outBufferId)
                     {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             // デコーダの出力フォーマットが変更された場合 (稀だが考慮)
                             Log.i(TAG, "デコーダの出力フォーマットが変更されました: ${decoder?.outputFormat}")
+
+
+
+
+
                         }
                         MediaCodec.INFO_TRY_AGAIN_LATER -> {
                             // 利用可能な出力バッファがない場合
+                            Log.v(TAG, "[MediaCodec.INFO_TRY_AGAIN_LATER] ($decodeCount)")
+                            try
+                            {
+                                // 試しに止めてみる...
+                                Thread.sleep(100)
+                            }
+                            catch (ex: Exception) {
+                                ex.printStackTrace()
+                            }
                         }
                         else -> {
+                            Log.v(TAG, "TYPE: $outBufferId  (count: $decodeCount)")
                             if (outBufferId >= 0) {
                                 val outputBuffer = decoder?.getOutputBuffer(outBufferId)
                                 if (outputBuffer != null && bufferInfo.size > 0) {
@@ -205,6 +345,7 @@ class NALToMP4Converter2(private val context: Context)
                                     copyBuffer.flip()
                                     decodedFramesQueue.put(copyBuffer)
                                     frameTimestampsQueue.put(bufferInfo.presentationTimeUs)
+                                    decodeCount++
                                 }
                                 decoder?.releaseOutputBuffer(outBufferId, false)
                                 if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
@@ -218,7 +359,9 @@ class NALToMP4Converter2(private val context: Context)
                 try {
                     decodedFramesQueue.put(ByteBuffer.allocate(0)) // EOFセンチネル
                     frameTimestampsQueue.put(-1L) // EOFセンチネル
+                    decodeCount++
                 } catch (e: InterruptedException) { /* ignore */ }
+                Log.v(TAG, "DECODE OUTPUT THREAD FINISHED (count: $decodeCount)")
             }
 
             // エンコーダ出力 & 多重化入力スレッド
@@ -229,13 +372,25 @@ class NALToMP4Converter2(private val context: Context)
 
                 while (!encoderOutputDone) {
                     // エンコーダからエンコード済みデータを取得し、Muxerに書き込む
-                    val outBufferId = encoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
+                    var outBufferId = MediaCodec.INFO_TRY_AGAIN_LATER
+                    do {
+                        try
+                        {
+                            outBufferId = encoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: MediaCodec.INFO_TRY_AGAIN_LATER
+                            Thread.sleep(WAIT_MS)
+                        }
+                        catch (e: Exception)
+                        {
+                            e.printStackTrace()
+                        }
+                    } while (outBufferId == MediaCodec.INFO_TRY_AGAIN_LATER)
+                    // val outBufferId = encoder?.dequeueOutputBuffer(bufferInfo, TIMEOUT_US) ?: -1
 ////////////////////////////////////////////////////////////////////////////////
 /*
                                             if (outBufferId >= 0)
                                             {
                                                 // デコードされたデータをビットマップ化
-                                                Log.v(TAG, "outBufferId: $outBufferId, size: ${bufferInfo.size}")
+                                                Log.v(TAG, "BITMAP outBufferId: $outBufferId, size: ${bufferInfo.size}")
                                                 try
                                                 {
                                                     val yuvBytes = ByteArray(VIDEO_WIDTH * VIDEO_HEIGHT * 3 / 2)
@@ -253,21 +408,34 @@ class NALToMP4Converter2(private val context: Context)
                                             }
 */
 ////////////////////////////////////////////////////////////////////////////////////
+                    Log.v(TAG, "  outBufferId: $outBufferId")
                     when (outBufferId) {
                         MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                             // エンコーダの出力フォーマットが変更された場合
                             val newFormat = encoder?.outputFormat
                             Log.i(TAG, "エンコーダの出力フォーマットが変更されました: $newFormat")
-                            if (muxer != null) {
-                                videoTrackIndex = muxer!!.addTrack(newFormat!!)
-                                muxer!!.start() // Muxerを開始
+                            if (::muxer.isInitialized)
+                            {
+                                videoTrackIndex = muxer.addTrack(newFormat!!)
+                                muxer.start()
                                 isMuxerStarted = true
                             }
                         }
                         MediaCodec.INFO_TRY_AGAIN_LATER -> {
                             // 利用可能な出力バッファがない場合
+                            Log.v(TAG, "(MediaCodec.INFO_TRY_AGAIN_LATER)")
+                            try
+                            {
+                                // 試しに止めてみる...
+                                Thread.sleep(100)
+                            }
+                            catch (ex: Exception)
+                            {
+                                ex.printStackTrace()
+                            }
                         }
                         else -> {
+                            Log.v(TAG, "TYPE: $outBufferId  ")
                             if (outBufferId >= 0) {
                                 val outputBuffer = encoder?.getOutputBuffer(outBufferId)
                                 if (outputBuffer != null && bufferInfo.size > 0) {
@@ -278,7 +446,7 @@ class NALToMP4Converter2(private val context: Context)
                                     }
                                     outputBuffer.position(bufferInfo.offset)
                                     outputBuffer.limit(bufferInfo.offset + bufferInfo.size)
-                                    muxer?.writeSampleData(videoTrackIndex, outputBuffer, bufferInfo)
+                                    muxer.writeSampleData(videoTrackIndex, outputBuffer, bufferInfo)
                                     lastFrameTimestamp = bufferInfo.presentationTimeUs
                                 }
                                 encoder?.releaseOutputBuffer(outBufferId, false)
@@ -320,12 +488,14 @@ class NALToMP4Converter2(private val context: Context)
             }
 
             // 各スレッドを開始
-            decoderInputThread.start()
+            //decoderInputThread.start()
+            decoderInputThreadOriginal.start()
             decoderOutputThread.start()
             encoderOutputThread.start()
 
             // 各スレッドの終了を待つ
-            decoderInputThread.join()
+            //decoderInputThread.join()
+            decoderInputThreadOriginal.join()
             decoderOutputThread.join()
             encoderOutputThread.join()
 
@@ -356,21 +526,21 @@ class NALToMP4Converter2(private val context: Context)
             decoder?.release()
             encoder?.stop()
             encoder?.release()
-            if (muxer != null && isMuxerStarted)
+            if (::muxer.isInitialized && isMuxerStarted)
             {
                 try
                 {
-                    muxer?.stop() // Muxerを停止
+                    muxer.stop() // Muxerを停止
                 }
                 catch (e: Exception)
                 {
                     e.printStackTrace()
                 }
             }
-            muxer?.release()
+            muxer.release()
             outputPfd?.close()
             fileInputStream?.close()
-            Log.d(TAG, "リソースが解放されました。")
+            Log.d(TAG, "Released resource")
         }
     }
 
@@ -387,10 +557,12 @@ class NALToMP4Converter2(private val context: Context)
         for (i in offset until limit - 3) {
             if (buffer[i] == 0x00.toByte() && buffer[i + 1] == 0x00.toByte()) {
                 if (buffer[i + 2] == 0x01.toByte()) { // 00 00 01
-                    return i + 3
+                    return i + 3   // for decoderInputThreadOriginal
+                    //return i          // for decoderInputThread
                 }
                 if (i + 3 < limit && buffer[i + 2] == 0x00.toByte() && buffer[i + 3] == 0x01.toByte()) { // 00 00 00 01
-                    return i + 4
+                    return i + 4   // for decoderInputThreadOriginal
+                    //return i         // for decoderInputThread
                 }
             }
         }
@@ -433,8 +605,8 @@ class NALToMP4Converter2(private val context: Context)
         private const val VIDEO_WIDTH = 960
         private const val VIDEO_HEIGHT = 720
         private const val VIDEO_FRAME_RATE = 15
-        private const val TIMEOUT_US = 10000L
-        private const val WAIT_MS = 10L
+        private const val TIMEOUT_US = 100000L
+        private const val WAIT_MS = 50L // 15 -> xxx
         private const val VIDEO_BITRATE = 1_000_000
         private const val VIDEO_I_FRAME_INTERVAL = 1
     }
