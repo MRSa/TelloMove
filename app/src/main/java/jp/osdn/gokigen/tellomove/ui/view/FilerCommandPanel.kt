@@ -143,7 +143,7 @@ fun FilerCommandPanel(navController: NavHostController, listViewModel: FileListV
             )
         }
         IconButton(
-            enabled = false,
+            enabled = true,
             onClick = { exportMovieFileConfirm = true }
         ) {
             Icon(
