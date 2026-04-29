@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "jp.osdn.gokigen.tellomove"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "jp.osdn.gokigen.tellomove"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 10002
         versionName = "1.0.2"
     }
@@ -29,9 +29,9 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlinOptions {
-        jvmTarget = "21"
-    }
+    //kotlinOptions {
+    //    jvmTarget = "21"
+    //}
     buildFeatures {
         compose = true
     }
