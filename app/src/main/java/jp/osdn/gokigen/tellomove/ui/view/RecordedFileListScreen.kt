@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,8 +39,6 @@ fun RecordedFileListScreen(navController: NavHostController, listViewModel: File
     val padding = 6.dp
 
     MaterialTheme {
-        val scrollState = rememberScrollState()
-
         val listState = rememberLazyListState()
         val fileNameList = listViewModel.fileNameList.observeAsState()
         val fileList = fileNameList.value ?: ArrayList()
@@ -83,22 +79,5 @@ fun RecordedFileListScreen(navController: NavHostController, listViewModel: File
                 }
             }
         }
-
-/*
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-        )
-        {
-            //Spacer(Modifier.size(padding))
-            HorizontalDivider(thickness = 1.dp)
-            FilerCommandPanel(navController, listViewModel)
-            Spacer(Modifier.size(padding))
-            HorizontalDivider(thickness = 1.dp)
-            MovieFileList(listViewModel)
-            ExecutionDialog(listViewModel)
-        }
-*/
     }
 }

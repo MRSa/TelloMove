@@ -110,7 +110,7 @@ class FileListViewModel: ViewModel()
                     }
                     _executing.value = true
 
-                    val outputFileName = fileName.replace(".mov","")
+                    val outputFileName = fileName.substringBeforeLast('.')
                     val converter = NALToMP4Converter2(context)
                     converter.convertNALToMp4(inputFileName = fileName, outputFileName = outputFileName, bitmapNotify = object : IBitmapReceiver {
                         override fun updateBitmapImage(bitmap: Bitmap) {
@@ -150,7 +150,7 @@ class FileListViewModel: ViewModel()
                     if (::fileOperation.isInitialized) {
                         _executing.value = true
 
-                        //val outputFileName = fileName.replace(".mov","")
+                        //val outputFileName = fileName.substringBeforeLast('.')
                         //val converter = NALToMP4Converter2(context)
                         //converter.convertNALToMp4(fileName, outputFileName)
 

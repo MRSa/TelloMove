@@ -3,6 +3,7 @@ package jp.osdn.gokigen.tellomove.communication
 import android.content.Context
 import android.graphics.Bitmap
 import android.media.MediaCodec
+import android.media.MediaCodecInfo
 import android.media.MediaFormat
 import android.util.Log
 import androidx.core.graphics.createBitmap
@@ -22,8 +23,12 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
     private val receiveQueue = ArrayBlockingQueue<ByteArray>(100)
     private val streamBuffer = ByteArrayOutputStream()
     private var running = false
+    @Volatile
     private var outputFile = false
+    @Volatile
     private var fileOutputStream : FileOutputStream? = null
+    private val fileLock = Any()
+    private var decoderReleased = false
     private lateinit var decoder: MediaCodec
     private lateinit var bitmapReceiver: IBitmapReceiver
     private lateinit var outputDirectory: File
@@ -41,12 +46,35 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         {
             Log.v(TAG, "stopReceive()")
             running = false
-            decoder.stop()
-            decoder.release()
+            releaseDecoder()
         }
         catch (e: Exception)
         {
             e.printStackTrace()
+        }
+    }
+
+    private fun releaseDecoder()
+    {
+        if (::decoder.isInitialized && !decoderReleased)
+        {
+            decoderReleased = true
+            try
+            {
+                decoder.stop()
+            }
+            catch (e: Exception)
+            {
+                e.printStackTrace()
+            }
+            try
+            {
+                decoder.release()
+            }
+            catch (e: Exception)
+            {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -72,24 +100,27 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
             // ---------- True: ビデオ録画の開始 / False ビデオ録画の終了
             Log.v(TAG, "changeRecordingStreamStatus : $onOff")
 
-            if (onOff) {
-                // ----- 録画開始
-                val targetFile = File(
-                    outputDirectory,
-                    "M" + SimpleDateFormat(
-                        FILENAME_FORMAT,
-                        Locale.US
-                    ).format(System.currentTimeMillis()) + "_" + 0 + ".mov"
-                )
-                fileOutputStream = FileOutputStream(targetFile)
-                outputFile = true
-            }
-            else
+            synchronized(fileLock)
             {
-                outputFile = false
-                fileOutputStream?.flush()
-                fileOutputStream?.close()
-                fileOutputStream = null
+                if (onOff) {
+                    // ----- 録画開始
+                    val targetFile = File(
+                        outputDirectory,
+                        "M" + SimpleDateFormat(
+                            FILENAME_FORMAT,
+                            Locale.US
+                        ).format(System.currentTimeMillis()) + "_" + 0 + ".h264"
+                    )
+                    fileOutputStream = FileOutputStream(targetFile)
+                    outputFile = true
+                }
+                else
+                {
+                    outputFile = false
+                    fileOutputStream?.flush()
+                    fileOutputStream?.close()
+                    fileOutputStream = null
+                }
             }
         }
         catch (e: Exception)
@@ -111,52 +142,35 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                 socket.receive(packet)
                 val receivedData = packet.data.copyOf(packet.length)
 
-                // -----  データの区切り位置 ("0x00 0x00 0x00 0x01" と "0x00 0x00 0x01" )を探して応答
+                // ----- 録画中: 受信パケットをそのまま順に書き出す (デコード用分割と独立)
+                if (outputFile)
+                {
+                    outputByteArrayToFile(receivedData)
+                }
+
+                // ----- デコード用: NAL 開始コード ("0x00 0x00 0x00 0x01" / "0x00 0x00 0x01") を検出してキューに投入
                 val index = findNalUnits(receivedData)
                 if (index < 0)
                 {
+                    // NAL 境界なし: バッファに蓄積
                     streamBuffer.write(receivedData, 0, packet.length)
                 }
                 else if (index == 0)
                 {
+                    // 前パケットから蓄積したデータが 1 単位の NAL を形成
                     val queuedData = streamBuffer.toByteArray()
-                    if (outputFile)
-                    {
-                        try
-                        {
-                            //val fileOutputData = queuedData.copyOf()
-                            //outputByteArrayToFile(fileOutputData)
-                            outputByteArrayToFile(queuedData)
-                        }
-                        catch (ee: Exception)
-                        {
-                            ee.printStackTrace()
-                        }
-                    }
                     receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     streamBuffer.reset()
                     streamBuffer.write(receivedData, 0, packet.length)
                 }
                 else
                 {
-                    streamBuffer.write(receivedData, 0, index - 1)
+                    // 蓄積データ + 先頭部分で 1 単位の NAL を形成
+                    streamBuffer.write(receivedData, 0, index)
                     val queuedData = streamBuffer.toByteArray()
-                    if (outputFile)
-                    {
-                        try
-                        {
-                            //val fileOutputData = queuedData.copyOf()
-                            //outputByteArrayToFile(fileOutputData)
-                            outputByteArrayToFile(queuedData)
-                        }
-                        catch (ee: Exception)
-                        {
-                            ee.printStackTrace()
-                        }
-                    }
                     receiveQueue.offer(queuedData, TIMEOUT_MS, TimeUnit.MILLISECONDS)
                     streamBuffer.reset()
-                    streamBuffer.write(queuedData, index, (queuedData.size - index))
+                    streamBuffer.write(receivedData, index, packet.length - index)
                 }
             }
         }
@@ -173,13 +187,16 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
 
     private fun outputByteArrayToFile(data: ByteArray)
     {
-        try
+        synchronized(fileLock)
         {
-            fileOutputStream?.write(data)
-        }
-        catch (e: Exception)
-        {
-            e.printStackTrace()
+            try
+            {
+                fileOutputStream?.write(data)
+            }
+            catch (e: Exception)
+            {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -362,12 +379,17 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
                                 // デコードされたデータを処理
                                 try
                                 {
-                                    val yuvBytes = ByteArray(bufferSize)
+                                    val yuvBytes = ByteArray(bufferInfo.size)
                                     val outputBuffer = decoder.getOutputBuffer(outputBufferIndex)
                                     outputBuffer?.position(bufferInfo.offset)
                                     outputBuffer?.limit(bufferInfo.offset + bufferInfo.size)
                                     outputBuffer?.get(yuvBytes)
-                                    val bitmap = yuv420ToBitmap(yuvBytes, width, height)
+                                    val colorFormat = try {
+                                        decoder.outputFormat.getInteger(MediaFormat.KEY_COLOR_FORMAT)
+                                    } catch (e: Exception) {
+                                        MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar
+                                    }
+                                    val bitmap = yuv420ToBitmap(yuvBytes, width, height, colorFormat)
                                     if (::bitmapReceiver.isInitialized)
                                     {
                                         bitmapReceiver.updateBitmapImage(bitmap)
@@ -400,15 +422,7 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         finally
         {
             Log.v(TAG, "Decoder Finished.")
-            try
-            {
-                decoder.stop()
-                decoder.release()
-            }
-            catch (ee: Exception)
-            {
-                ee.printStackTrace()
-            }
+            releaseDecoder()
         }
     }
 
@@ -417,19 +431,45 @@ class StreamReceiver(private val streamPortNo: Int = STREAM_PORT, private val wi
         bitmapReceiver = target
     }
 
-    // YUVデータをBitmapに変換する関数（実装は非常に複雑）
-    private fun yuv420ToBitmap(yuvBytes: ByteArray, width: Int, height: Int): Bitmap
+    // YUVデータをBitmapに変換する関数 (I420 / NV12 / NV21 対応)
+    private fun yuv420ToBitmap(
+        yuvBytes: ByteArray,
+        width: Int,
+        height: Int,
+        colorFormat: Int = MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar
+    ): Bitmap
     {
         val out = IntArray(width * height)
-        val uIndex = width * height
-        val vIndex = width * height * 5 / 4
-        var yIndex = 0
+        val ySize = width * height
+        val uvSize = width * height / 2
+        val uvWidth = width / 2
+
+        // U / V を色形式に応じて取得 (SemiPlanar は NV21: V が先 を想定)
+        fun getU(uvX: Int, uvY: Int): Int {
+            return when (colorFormat) {
+                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar ->
+                    (yuvBytes[ySize + uvY * uvWidth + uvX].toInt() and 0xff)
+                else -> // SemiPlanar (NV21: V first)
+                    (yuvBytes[ySize + uvY * uvWidth + uvX * 2 + 1].toInt() and 0xff)
+            }
+        }
+        fun getV(uvX: Int, uvY: Int): Int {
+            return when (colorFormat) {
+                MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar ->
+                    (yuvBytes[ySize + uvSize + uvY * uvWidth + uvX].toInt() and 0xff)
+                else -> // SemiPlanar (NV21: V first)
+                    (yuvBytes[ySize + uvY * uvWidth + uvX * 2].toInt() and 0xff)
+            }
+        }
+
         var i = 0
         for (y in 0 until height) {
+            val uvY = y shr 1
             for (x in 0 until width) {
-                val yValue = (yuvBytes[yIndex++].toInt() and 0xff) - 16
-                val uValue = (yuvBytes[uIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
-                val vValue = (yuvBytes[vIndex + (x shr 1) + (y shr 1) * (width shr 1)].toInt() and 0xff) - 128
+                val uvX = x shr 1
+                val yValue = (yuvBytes[i].toInt() and 0xff) - 16
+                val uValue = getU(uvX, uvY) - 128
+                val vValue = getV(uvX, uvY) - 128
 
                 var r = (1.164 * yValue + 1.596 * vValue).toInt()
                 var g = (1.164 * yValue - 0.391 * uValue - 0.813 * vValue).toInt()

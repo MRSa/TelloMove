@@ -77,9 +77,10 @@ class NALToMP4Converter2(private val context: Context)
             }
             else
             {
-                // API 26未満では、MediaMuxer.OutputFormatはint型
-                // MediaMuxer(pfd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG4)
-                MediaMuxer("${Environment.DIRECTORY_MOVIES}/$outputDir/$outputFileName", MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
+                // API 26未満では、絶対パスを指定する
+                val outDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), outputDir)
+                outDir.mkdirs()
+                MediaMuxer(File(outDir, outputFileName).absolutePath, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
             }
             //outputPfd.close() // MediaMuxerに渡した後、ParcelFileDescriptorをクローズする
             //muxer = MediaMuxer(outputPfd.fileDescriptor, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
@@ -112,7 +113,7 @@ class NALToMP4Converter2(private val context: Context)
 
             // NAL読み込み用の十分な大きさのバッファ
             val fileSize = fileInputStream.available()
-            val bufferSize = fileSize // BUFFER_SIZE
+            val bufferSize = BUFFER_SIZE
             val inputBuffer = ByteArray(bufferSize)
             var bytesRead: Int
             var presentationTimeUs: Long = 0
@@ -217,51 +218,100 @@ class NALToMP4Converter2(private val context: Context)
             // デコーダ入力スレッド
             val decoderInputThreadOriginal = Thread {
                 var bufferOffset = 0
+                var eof = false
                 try
                 {
                     // ファイルからデータを読み込み、NALユニットをデコーダに投入
-                    while (fileInputStream.read(inputBuffer, bufferOffset, inputBuffer.size - bufferOffset).also { bytesRead = it } != -1 || bufferOffset > 0) {
-                        val totalBytes = bufferOffset + bytesRead
+                    while (true)
+                    {
+                        bytesRead = fileInputStream.read(inputBuffer, bufferOffset, inputBuffer.size - bufferOffset)
+                        if (bytesRead < 0)
+                        {
+                            if (bufferOffset == 0) break // EOF かつ退避データなし
+                            eof = true
+                        }
+                        val totalBytes = bufferOffset + (if (bytesRead >= 0) bytesRead else 0)
                         var nalStart = 0
                         while (nalStart < totalBytes)
                         {
                             // 次のNALユニットの開始位置を見つける
-                            val nalEnd = findNextNalStart(inputBuffer, nalStart, totalBytes)
-                            if (nalEnd == -1) { // このバッファにこれ以上NALがない場合、残りを保存
+                            val nalStartPos = findNextNalStart(inputBuffer, nalStart, totalBytes)
+                            if (nalStartPos == -1)
+                            {
+                                if (eof) break
+                                // 開始コードなし: 残りを次読み込み用に退避
                                 System.arraycopy(inputBuffer, nalStart, inputBuffer, 0, totalBytes - nalStart)
                                 bufferOffset = totalBytes - nalStart
                                 break
                             }
-                            val nalUnitSize = nalEnd - nalStart
-
-                            // NALユニットを新しいByteBufferにコピー
-                            val nalUnit = ByteBuffer.allocateDirect(nalUnitSize)
-                            nalUnit.put(inputBuffer, nalStart, nalUnitSize)
-                            nalUnit.flip()
-
-                            // デコーダにNALユニットを投入
-                            val inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1 // 10ms タイムアウト
-                            if (inBufferId >= 0)
+                            // 次の NAL 開始コード位置から現在の NAL の終端を決定
+                            val nextStartPos = findNextNalStart(inputBuffer, nalStartPos + 3, totalBytes)
+                            if (nextStartPos == -1)
                             {
-                                val buffer = decoder?.getInputBuffer(inBufferId)
-                                buffer?.clear()
-                                buffer?.put(nalUnit)
-                                // NALにタイムスタンプ情報がないため、フレームレートに基づいて推測値を付与
-                                decoder?.queueInputBuffer(inBufferId, 0, nalUnit.limit(), presentationTimeUs, 0)
-                                presentationTimeUs += (VIDEO_BITRATE / VIDEO_FRAME_RATE).toLong()
+                                if (eof)
+                                {
+                                    // 最終 NAL: 末尾までを 1 単位の NAL として投入
+                                    val nalUnitSize = totalBytes - nalStartPos
+                                    val nalUnit = ByteBuffer.allocateDirect(nalUnitSize)
+                                    nalUnit.put(inputBuffer, nalStartPos, nalUnitSize)
+                                    nalUnit.flip()
+                                    val inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1
+                                    if (inBufferId >= 0)
+                                    {
+                                        val buffer = decoder?.getInputBuffer(inBufferId)
+                                        buffer?.clear()
+                                        buffer?.put(nalUnit)
+                                        decoder?.queueInputBuffer(inBufferId, 0, nalUnit.limit(), presentationTimeUs, 0)
+                                        presentationTimeUs += FRAME_INTERVAL_US
+                                    }
+                                    else
+                                    {
+                                        Thread.sleep(WAIT_MS)
+                                    }
+                                    nalStart = totalBytes
+                                }
+                                else
+                                {
+                                    // NAL が次読み込みへ継続: 開始コード以降を退避
+                                    System.arraycopy(inputBuffer, nalStartPos, inputBuffer, 0, totalBytes - nalStartPos)
+                                    bufferOffset = totalBytes - nalStartPos
+                                    break
+                                }
                             }
                             else
                             {
-                                // デコーダの入力バッファが利用できない場合、少し待つ
-                                Thread.sleep(WAIT_MS)
+                                val nalEndPos = nextStartPos
+                                val nalUnitSize = nalEndPos - nalStartPos
+
+                                val nalUnit = ByteBuffer.allocateDirect(nalUnitSize)
+                                nalUnit.put(inputBuffer, nalStartPos, nalUnitSize)
+                                nalUnit.flip()
+
+                                // NALユニットをデコーダに投入
+                                val inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1
+                                if (inBufferId >= 0)
+                                {
+                                    val buffer = decoder?.getInputBuffer(inBufferId)
+                                    buffer?.clear()
+                                    buffer?.put(nalUnit)
+                                    // NALにタイムスタンプ情報がないため、フレームレートに基づいて推測値を付与
+                                    decoder?.queueInputBuffer(inBufferId, 0, nalUnit.limit(), presentationTimeUs, 0)
+                                    presentationTimeUs += FRAME_INTERVAL_US
+                                }
+                                else
+                                {
+                                    // デコーダの入力バッファが利用できない場合、少し待つ
+                                    Thread.sleep(WAIT_MS)
+                                }
+                                nalStart = nalEndPos
                             }
-                            nalStart = nalEnd
                         }
                         if (nalStart == totalBytes)
                         {
                             // 現在のバッファからすべてのNALを処理済み
                             bufferOffset = 0
                         }
+                        if (eof) break
                     }
                     // ストリームの終端をデコーダに通知
                     val inBufferId = decoder?.dequeueInputBuffer(TIMEOUT_US) ?: -1
@@ -526,18 +576,28 @@ class NALToMP4Converter2(private val context: Context)
             decoder?.release()
             encoder?.stop()
             encoder?.release()
-            if (::muxer.isInitialized && isMuxerStarted)
+            if (::muxer.isInitialized)
             {
+                if (isMuxerStarted)
+                {
+                    try
+                    {
+                        muxer.stop() // Muxerを停止
+                    }
+                    catch (e: Exception)
+                    {
+                        e.printStackTrace()
+                    }
+                }
                 try
                 {
-                    muxer.stop() // Muxerを停止
+                    muxer.release()
                 }
                 catch (e: Exception)
                 {
                     e.printStackTrace()
                 }
             }
-            muxer.release()
             outputPfd?.close()
             fileInputStream?.close()
             Log.d(TAG, "Released resource")
@@ -554,16 +614,15 @@ class NALToMP4Converter2(private val context: Context)
      * @return 次のNALユニットの開始位置のインデックス、または制限内で見つからない場合は-1。
      */
     private fun findNextNalStart(buffer: ByteArray, offset: Int, limit: Int): Int {
-        for (i in offset until limit - 3) {
-            if (buffer[i] == 0x00.toByte() && buffer[i + 1] == 0x00.toByte()) {
-                if (buffer[i + 2] == 0x01.toByte()) { // 00 00 01
-                    return i + 3   // for decoderInputThreadOriginal
-                    //return i          // for decoderInputThread
-                }
-                if (i + 3 < limit && buffer[i + 2] == 0x00.toByte() && buffer[i + 3] == 0x01.toByte()) { // 00 00 00 01
-                    return i + 4   // for decoderInputThreadOriginal
-                    //return i         // for decoderInputThread
-                }
+        for (i in offset until limit) {
+            if (i + 2 < limit &&
+                buffer[i] == 0x00.toByte() && buffer[i + 1] == 0x00.toByte() && buffer[i + 2] == 0x01.toByte()) {
+                return i // 00 00 01
+            }
+            if (i + 3 < limit &&
+                buffer[i] == 0x00.toByte() && buffer[i + 1] == 0x00.toByte() &&
+                buffer[i + 2] == 0x00.toByte() && buffer[i + 3] == 0x01.toByte()) {
+                return i // 00 00 00 01
             }
         }
         return -1
@@ -609,5 +668,6 @@ class NALToMP4Converter2(private val context: Context)
         private const val WAIT_MS = 50L // 15 -> xxx
         private const val VIDEO_BITRATE = 1_000_000
         private const val VIDEO_I_FRAME_INTERVAL = 1
+        private const val FRAME_INTERVAL_US = 1_000_000L / VIDEO_FRAME_RATE
     }
 }
